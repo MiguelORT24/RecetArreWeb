@@ -1,55 +1,59 @@
-﻿using Microsoft.AspNetCore.Components.Authorization;
-using RecetArreWeb.Services;
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography.X509Certificates;
+using Microsoft.AspNetCore.Components.Authorization;
+using RecetArreWeb.Services;
 
-public class AuthStateProvider : AuthenticationStateProvider
+namespace RecetArreWeb.Auth
 {
-    private readonly ITokenService tokenService;
-    private readonly AuthenticationState anonimo = new(new ClaimsPrincipal(new ClaimsIdentity()));
-
-    public AuthStateProvider(ITokenService tokenService)
+    public class AuthStateProvider : AuthenticationStateProvider
     {
-        this.tokenService = tokenService;
-    }
+        private readonly ITokenService tokenService;
+        private readonly AuthenticationState anonimo = new(new ClaimsPrincipal(new ClaimsIdentity()));
 
-    public override async Task<AuthenticationState> GetAuthenticationStateAsync()
-    {
-        var token = await tokenService.ObtenerToken();
-
-        if (string.IsNullOrEmpty(token))
-            return anonimo;
-
-        return ConstruirAuthenticationState(token);
-    }
-
-    public AuthenticationState ConstruirAuthenticationState(string token)
-    {
-        try
+        public AuthStateProvider(ITokenService tokenService)
         {
-            var handler = new JwtSecurityTokenHandler();
-            var jwtToken = handler.ReadJwtToken(token);
-
-            var claims = jwtToken.Claims;
-            var identity = new ClaimsIdentity(claims, "jwt");
-            var user = new ClaimsPrincipal(identity);
-
-            return new AuthenticationState(user);
+            this.tokenService = tokenService;
         }
-        catch
+
+        public override async Task<AuthenticationState> GetAuthenticationStateAsync()
         {
-            return anonimo;
+            var token = await tokenService.ObtenerToken();
+
+            if (string.IsNullOrEmpty(token))
+                return anonimo;
+
+            return ConstruirAuthenticationState(token);
         }
-    }
 
-    public void NotificarLogin(string token)
-    {
-        var authState = ConstruirAuthenticationState(token);
-        NotifyAuthenticationStateChanged(Task.FromResult(authState));
-    }
+        public AuthenticationState ConstruirAuthenticationState(string token)
+        {
+            try
+            {
+                var handler = new JwtSecurityTokenHandler();
+                var jwtToken = handler.ReadJwtToken(token);
 
-    public void NotificarLogout()
-    {
-        NotifyAuthenticationStateChanged(Task.FromResult(anonimo));
+                var claims = jwtToken.Claims;
+                var identity = new ClaimsIdentity(claims, "jwt");
+                var user = new ClaimsPrincipal(identity);
+
+                return new AuthenticationState(user);
+            }
+            catch
+            {
+                return anonimo;
+            }
+        }
+
+        public void NotificarLogin(string token)
+        {
+            var authState = ConstruirAuthenticationState(token);
+            NotifyAuthenticationStateChanged(Task.FromResult(authState));
+        }
+
+        public void NotificarLogout()
+        {
+            NotifyAuthenticationStateChanged(Task.FromResult(anonimo));
+        }
     }
 }

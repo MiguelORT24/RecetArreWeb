@@ -1,4 +1,9 @@
 @page "/login"
+@inject IAuthService authService
+@inject NavigationManager navigation
+@inject AuthenticationStateProvider authStateProvider
+@using RecetArreWeb.DTOs
+@using RecetArreWeb.Auth
 
 <PageTitle>Login</PageTitle>
 
@@ -16,10 +21,24 @@
                             <p class="text-muted mb-0">Inicia sesión para continuar</p>
                         </div>
 
-                        <form>
+                        @if (!string.IsNullOrEmpty(mensajeError))
+                        {
+                            <div class="alert alert-danger alert-dismissible fade show">
+                                <strong>Error:</strong> @mensajeError
+                                <button type="button" class="btn-close" 
+                                        @onclick="() => mensajeError = string.Empty"></button>
+                            </div>
+                        }
+
+                        <EditForm Model="credenciales" OnValidSubmit="HandleLogin">
+                            <DataAnnotationsValidator />
+
                             <div class="mb-3">
                                 <label class="form-label">Correo electrónico</label>
-                                <input type="email" class="form-control" placeholder="nombre@correo.com" />
+                                <InputText @bind-Value="credenciales.Email" 
+                                           class="form-control" 
+                                           placeholder="nombre@correo.com" />
+                                <ValidationMessage For="@(() => credenciales.Email)" />
                             </div>
 
                             <div class="mb-3">
@@ -27,7 +46,11 @@
                                     <span>Contraseña</span>
                                     <a class="small link-brand" href="#">¿Olvidaste tu contraseña?</a>
                                 </label>
-                                <input type="password" class="form-control" placeholder="••••••••" />
+                                <InputText type="password" 
+                                           @bind-Value="credenciales.Password" 
+                                           class="form-control" 
+                                           placeholder="••••••••" />
+                                <ValidationMessage For="@(() => credenciales.Password)" />
                             </div>
 
                             <div class="d-flex align-items-center justify-content-between mb-3">
@@ -37,12 +60,18 @@
                                 </div>
                             </div>
 
-                            <button type="submit" class="btn btn-brand w-100">Entrar</button>
-                        </form>
+                            <button type="submit" class="btn btn-brand w-100" disabled="@cargando">
+                                @if (cargando)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                Entrar
+                            </button>
+                        </EditForm>
 
                         <div class="text-center mt-3">
                             <span class="text-muted">¿No tienes cuenta?</span>
-                            <a class="link-brand fw-semibold ms-1" href="#">Regístrate</a>
+                            <a class="link-brand fw-semibold ms-1" href="/registro">Regístrate</a>
                         </div>
                     </div>
                 </div>
@@ -52,3 +81,40 @@
         </div>
     </div>
 </div>
+
+@code {
+    private CredencialesUsuario credenciales = new();
+    private bool cargando = false;
+    private string mensajeError = string.Empty;
+
+    private async Task HandleLogin()
+    {
+        cargando = true;
+        mensajeError = string.Empty;
+
+        try
+        {
+            var respuesta = await authService.Login(credenciales);
+
+            if (respuesta != null)
+            {
+                var authProvider = (AuthStateProvider)authStateProvider;
+                authProvider.NotificarLogin(respuesta.Token);
+
+                navigation.NavigateTo("/");
+            }
+            else
+            {
+                mensajeError = "Credenciales incorrectas. Verifica tu email y contraseña.";
+            }
+        }
+        catch (Exception ex)
+        {
+            mensajeError = $"Error al iniciar sesión: {ex.Message}";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+}

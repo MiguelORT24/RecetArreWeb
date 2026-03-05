@@ -1,5 +1,5 @@
-﻿using RecetArreWeb.DTOs;
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
+using RecetArreWeb.DTOs;
 
 namespace RecetArreWeb.Services
 {
@@ -28,10 +28,8 @@ namespace RecetArreWeb.Services
             try
             {
                 var response = await httpClient.PostAsJsonAsync($"{endpoint}/Login", credencialesUsuario);
-
                 if (response.IsSuccessStatusCode)
                 {
-                    // Leer la respuesta y extraer el token
                     var respuesta = await response.Content.ReadFromJsonAsync<RespuestaAutenticacion>();
 
                     if (respuesta != null)
@@ -43,19 +41,16 @@ namespace RecetArreWeb.Services
                 else
                 {
                     var error = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"Error en Login: {error}");
+                    Console.WriteLine($"Error en login: {error}");
                 }
                 return null;
             }
-           
             catch (Exception ex)
             {
-                Console.WriteLine($"Error al hacer login: {ex.Message}");
+                Console.WriteLine($"Error en login: {ex.Message}");
                 return null;
             }
-            
         }
-
         public async Task Logout()
         {
             await tokenService.EliminarToken();
@@ -66,33 +61,29 @@ namespace RecetArreWeb.Services
             try
             {
                 var response = await httpClient.PostAsJsonAsync($"{endpoint}/registrar", credenciales);
-
                 if (response.IsSuccessStatusCode)
                 {
                     var respuesta = await response.Content.ReadFromJsonAsync<RespuestaAutenticacion>();
 
                     if (respuesta != null)
                     {
-                        if (tokenService != null)
-                        {
-                            await tokenService.GuardarToken(respuesta.Token, respuesta.Expiracion);
-                        }
+                        await tokenService.GuardarToken(respuesta.Token, respuesta.Expiracion);
                         return respuesta;
                     }
                 }
+                // else
+                // {
+                //     var error = await response.Content.ReadAsStringAsync();
+                //     Console.WriteLine($"Error en login: {error}");
+                // }
                 return null;
-                //else
-                //{
-                //    var error = await response.Content.ReadAsStringAsync();
-                //    Console.WriteLine($"Error en Registrar: {error}");
-                //}
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error al registrar usuario: {ex.Message}");
             }
 
-            return null;
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error en login: {ex.Message}");
+                return null;
+            }
         }
 
         public async Task<RespuestaAutenticacion?> RenovarToken()
@@ -100,36 +91,28 @@ namespace RecetArreWeb.Services
             try
             {
                 var token = await tokenService.ObtenerToken();
+
                 if (string.IsNullOrEmpty(token))
-                {
-                    return null; 
-                }
-                //agregar el token actual al header
-                httpClient.DefaultRequestHeaders.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
+                    return null;
+                //Agregar el token actual al header
+                httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
                 var response = await httpClient.GetAsync($"{endpoint}/RenovarToken");
-
                 if (response.IsSuccessStatusCode)
                 {
                     var respuesta = await response.Content.ReadFromJsonAsync<RespuestaAutenticacion>();
-
-                    if(response != null)
+                    if (response != null)
                     {
                         await tokenService.GuardarToken(respuesta!.Token, respuesta.Expiracion);
-                        return respuesta; 
+                        return respuesta;
                     }
                 }
                 return null;
-
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error al renovar token: {ex.Message}");
                 return null;
             }
-            
         }
-        
     }
 }
