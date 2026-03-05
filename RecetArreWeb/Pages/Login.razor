@@ -1,0 +1,54 @@
+@page "/login"
+
+<PageTitle>Login</PageTitle>
+
+<div class="login-page">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-sm-10 col-md-7 col-lg-5">
+                <div class="card shadow border-0 login-card">
+                    <div class="card-body p-4">
+                        <div class="text-center mb-4">
+                            <div class="login-logo bg-brand text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3">
+                                <span class="fw-bold">RA</span>
+                            </div>
+                            <h2 class="h4 text-brand mb-1">Bienvenido</h2>
+                            <p class="text-muted mb-0">Inicia sesión para continuar</p>
+                        </div>
+
+                        <form>
+                            <div class="mb-3">
+                                <label class="form-label">Correo electrónico</label>
+                                <input type="email" class="form-control" placeholder="nombre@correo.com" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label d-flex justify-content-between">
+                                    <span>Contraseña</span>
+                                    <a class="small link-brand" href="#">¿Olvidaste tu contraseña?</a>
+                                </label>
+                                <input type="password" class="form-control" placeholder="••••••••" />
+                            </div>
+
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="rememberMe" />
+                                    <label class="form-check-label" for="rememberMe">Recuérdame</label>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-brand w-100">Entrar</button>
+                        </form>
+
+                        <div class="text-center mt-3">
+                            <span class="text-muted">¿No tienes cuenta?</span>
+                            <a class="link-brand fw-semibold ms-1" href="#">Regístrate</a>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="text-center text-muted small mt-3 mb-0">Acceso seguro para tu cuenta</p>
+            </div>
+        </div>
+    </div>
+</div>
