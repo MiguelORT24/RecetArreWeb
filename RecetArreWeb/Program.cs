@@ -30,6 +30,7 @@ builder.Services.AddScoped<HttpClient>(sp =>
 //registrar los servicios
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ICategoriaService, CategoriaService>();
 // TODO: Todos los demás servicios ejemplo ICategoriaService, IRecetaService, etc
 
 //Configurar autenticación

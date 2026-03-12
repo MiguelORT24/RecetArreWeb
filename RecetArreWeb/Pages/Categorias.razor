@@ -1,9 +1,24 @@
 @page "/categorias" 
 @using RecetArreWeb.DTOs
+@inject RecetArreWeb.Services.ICategoriaService CategoriaService
 
 <PageTitle>Gestión de Categorías</PageTitle>
 
 <div class="container-fluid py-4">
+    @if (mostrarAlertaExito)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @mensajeExito
+            <button type="button" class="btn-close" aria-label="Close" @onclick="CerrarAlertas"></button>
+        </div>
+    }
+    @if (mostrarAlertaError)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @mensajeError
+            <button type="button" class="btn-close" aria-label="Close" @onclick="CerrarAlertas"></button>
+        </div>
+    }
     <!-- Encabezado de la página -->
     <div class="row mb-4">
         <div class="col-12">
@@ -222,6 +237,10 @@
     private CategoriaDto? categoriaEditando = null;
     private string nombreCategoria = "";
     private string descripcionCategoria = "";
+    private bool mostrarAlertaError = false;
+    private bool mostrarAlertaExito = false;
+    private string mensajeError = string.Empty;
+    private string mensajeExito = string.Empty;
 
     private IEnumerable<CategoriaDto> CategoriasFiltradas
     {
@@ -246,16 +265,17 @@
 
     private async Task CargarCategorias()
     {
-        await Task.Delay(500);
-        
-        categorias = new List<CategoriaDto>
+        // Cargar desde el servicio (API)
+        try
         {
-            new CategoriaDto { Id = 1, Nombre = "Postres", Descripcion = "Recetas dulces y deliciosas", CreadoUtc = DateTime.UtcNow.AddDays(-10) },
-            new CategoriaDto { Id = 2, Nombre = "Ensaladas", Descripcion = "Platos frescos y saludables", CreadoUtc = DateTime.UtcNow.AddDays(-8) },
-            new CategoriaDto { Id = 3, Nombre = "Sopas", Descripcion = "Caldos y cremas reconfortantes", CreadoUtc = DateTime.UtcNow.AddDays(-5) },
-            new CategoriaDto { Id = 4, Nombre = "Pastas", Descripcion = null, CreadoUtc = DateTime.UtcNow.AddDays(-3) },
-            new CategoriaDto { Id = 5, Nombre = "Carnes", Descripcion = "Recetas con carnes rojas y blancas", CreadoUtc = DateTime.UtcNow.AddDays(-1) }
-        };
+            categorias = await CategoriaService.ObtenerTodasCategorias();
+        }
+        catch (Exception ex)
+        {
+            categorias = new List<CategoriaDto>();
+            mensajeError = "Error al cargar categorías: " + ex.Message;
+            mostrarAlertaError = true;
+        }
     }
 
     private void AbrirModalCrear()
@@ -288,19 +308,49 @@
 
         if (categoriaEditando == null)
         {
-            var nueva = new CategoriaDto
+            var dto = new CategoriaCreacionDto
             {
-                Id = (categorias?.Max(c => c.Id) ?? 0) + 1,
                 Nombre = nombreCategoria,
-                Descripcion = string.IsNullOrWhiteSpace(descripcionCategoria) ? null : descripcionCategoria,
-                CreadoUtc = DateTime.UtcNow
+                Descripcion = string.IsNullOrWhiteSpace(descripcionCategoria) ? null : descripcionCategoria
             };
-            categorias?.Add(nueva);
+
+            var creada = await CategoriaService.CrearCategoria(dto);
+            if (creada != null)
+            {
+                // actualizar lista local
+                categorias ??= new List<CategoriaDto>();
+                categorias.Add(creada);
+                mensajeExito = "Categoría creada correctamente.";
+                mostrarAlertaExito = true;
+            }
+            else
+            {
+                mensajeError = "No se pudo crear la categoría. Verifica el servidor o revisa la consola.";
+                mostrarAlertaError = true;
+            }
         }
         else
         {
-            categoriaEditando.Nombre = nombreCategoria;
-            categoriaEditando.Descripcion = string.IsNullOrWhiteSpace(descripcionCategoria) ? null : descripcionCategoria;
+            var dto = new CategoriaModificacionDto
+            {
+                Nombre = nombreCategoria,
+                Descripcion = string.IsNullOrWhiteSpace(descripcionCategoria) ? null : descripcionCategoria
+            };
+
+            var ok = await CategoriaService.ActualizarCategoria(categoriaEditando.Id, dto);
+            if (ok)
+            {
+                // actualizar la copia local para reflejar los cambios
+                categoriaEditando.Nombre = nombreCategoria;
+                categoriaEditando.Descripcion = string.IsNullOrWhiteSpace(descripcionCategoria) ? null : descripcionCategoria;
+                mensajeExito = "Categoría actualizada correctamente.";
+                mostrarAlertaExito = true;
+            }
+            else
+            {
+                mensajeError = "No se pudo actualizar la categoría.";
+                mostrarAlertaError = true;
+            }
         }
 
         CerrarModal();
@@ -309,16 +359,40 @@
 
     private void EliminarCategoria(int id)
     {
-        var categoria = categorias?.FirstOrDefault(c => c.Id == id);
-        if (categoria != null)
+        _ = EliminarCategoriaAsync(id);
+    }
+
+    private async Task EliminarCategoriaAsync(int id)
+    {
+        var ok = await CategoriaService.EliminarCategoria(id);
+        if (ok)
         {
-            categorias?.Remove(categoria);
-            StateHasChanged();
+            var categoria = categorias?.FirstOrDefault(c => c.Id == id);
+            if (categoria != null)
+            {
+                categorias?.Remove(categoria);
+                StateHasChanged();
+                mensajeExito = "Categoría eliminada correctamente.";
+                mostrarAlertaExito = true;
+            }
+        }
+        else
+        {
+            mensajeError = "No se pudo eliminar la categoría.";
+            mostrarAlertaError = true;
         }
     }
 
     private void LimpiarBusqueda()
     {
         busqueda = "";
+    }
+
+    private void CerrarAlertas()
+    {
+        mostrarAlertaError = false;
+        mostrarAlertaExito = false;
+        mensajeError = string.Empty;
+        mensajeExito = string.Empty;
     }
 }

@@ -23,12 +23,6 @@ namespace RecetArreWeb.Services
         {
             this.jsRuntime = jSRuntime;
         }
-
-        Task ITokenService.EliminarToken()
-        {
-            throw new NotImplementedException();
-        }
-
         public async Task EliminarToken()
         {
             await jsRuntime.InvokeVoidAsync("localStorage.removeItem", TOKEN_KEY);
@@ -49,7 +43,6 @@ namespace RecetArreWeb.Services
             //Formato ISO 8601 para asegurar que se guarde correctamente la fecha y hora
 
         }
-
         public async Task<DateTime?> ObtenerExpiracion()
         {
             try
@@ -69,7 +62,7 @@ namespace RecetArreWeb.Services
             }
 
 
-            return DateTime.MinValue; // Si no se pudo parsear, devolver una fecha mínima
+            return null; // Si ocurre un error, devolver null
         }
 
         public async Task<string> ObtenerToken()
@@ -77,7 +70,7 @@ namespace RecetArreWeb.Services
             try
             {
                 //1. Leer el token de LocalStorage
-                var token = await jsRuntime.InvokeAsync<string?>("local.Storage.getItem", TOKEN_KEY);
+                var token = await jsRuntime.InvokeAsync<string>("localStorage.getItem", TOKEN_KEY);
                 //2. Si no hay toquek, devolver null
                 if (string.IsNullOrEmpty(token))
                     return null;
@@ -98,8 +91,7 @@ namespace RecetArreWeb.Services
                 Console.WriteLine($"Error al obtener el token: {ex.Message}");
                 return null;
             }
-
-            return await jsRuntime.InvokeAsync<string>("local.Storage.getItem", TOKEN_KEY);
+            //return await jsRuntime.InvokeAsync<string>("local.Storage.getItem", TOKEN_KEY);
         }
     }
 }
