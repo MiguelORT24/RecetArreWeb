@@ -247,14 +247,17 @@
         get
         {
             if (categorias == null) return Enumerable.Empty<CategoriaDto>();
-            
-            if (string.IsNullOrWhiteSpace(busqueda))
-                return categorias;
-            
-            return categorias.Where(c => 
-                c.Nombre.Contains(busqueda, StringComparison.OrdinalIgnoreCase) ||
-                (c.Descripcion?.Contains(busqueda, StringComparison.OrdinalIgnoreCase) ?? false)
-            );
+
+            // Aplicar filtro si hay búsqueda
+            var query = string.IsNullOrWhiteSpace(busqueda)
+                ? categorias.AsEnumerable()
+                : categorias.Where(c =>
+                    c.Nombre.Contains(busqueda, StringComparison.OrdinalIgnoreCase) ||
+                    (c.Descripcion?.Contains(busqueda, StringComparison.OrdinalIgnoreCase) ?? false)
+                  );
+
+            // Orden consistente: por Id ascendente. Cambia a OrderByDescending(c => c.CreadoUtc) si prefieres recientes primero.
+            return query.OrderBy(c => c.Id);
         }
     }
 
@@ -317,9 +320,12 @@
             var creada = await CategoriaService.CrearCategoria(dto);
             if (creada != null)
             {
-                // actualizar lista local
-                categorias ??= new List<CategoriaDto>();
-                categorias.Add(creada);
+                // // actualizar lista local
+                // categorias ??= new List<CategoriaDto>();
+                // categorias.Add(creada);
+
+                // Refrescar la lista desde el servidor para mantener orden y datos canónicos
+                await CargarCategorias();
                 mensajeExito = "Categoría creada correctamente.";
                 mostrarAlertaExito = true;
             }

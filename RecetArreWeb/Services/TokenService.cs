@@ -89,9 +89,9 @@ namespace RecetArreWeb.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"Error al obtener el token: {ex.Message}");
-                return null;
+                //return null;
             }
-            //return await jsRuntime.InvokeAsync<string>("local.Storage.getItem", TOKEN_KEY);
+           return await jsRuntime.InvokeAsync<string>("local.Storage.getItem", TOKEN_KEY);
         }
     }
 }
