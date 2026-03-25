@@ -1,177 +1,213 @@
 ﻿@page "/recetas"
-@using RecetArreWeb.DTOs
-@using System.Security.Claims
-@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject IRecetaService recetaService
+@inject ICategoriaService categoriaService
+@inject NavigationManager navigation
+@inject IJSRuntime JSRuntime
 
-@inject NavigationManager Navigation
+<PageTitle>Recetas</PageTitle>
 
-@code {
-    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; } = default!;
-}
-
-<div class="container py-4">
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card p-3">
-                <h3 class="mb-1">@Recipe.Title</h3>
-                <p class="text-muted">Por @Recipe.Author &bull; @Recipe.Time min</p>
-
-                <img src="@Recipe.ImageUrl" class="img-fluid rounded mb-3" alt="Imagen receta" />
-
-                <h5>Ingredientes</h5>
-                <ul>
-                    @foreach (var ing in Recipe.Ingredients)
-                    {
-                        <li>@ing</li>
-
-
-                    }
-                </ul>
-
-                <h5>Preparación</h5>
-                <ol>
-                    @foreach (var step in Recipe.Steps)
-                    {
-                        <li>@step</li>
-                    }
-                </ol>
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 text-brand mb-1">Mis Recetas</h1>
+                    <p class="text-muted mb-0">Descubre y gestiona tus recetas favoritas</p>
+                </div>
+                <button class="btn btn-brand" @onclick="IrACrear">
+                    <span class="bi bi-plus-circle me-1"></span> Nueva Receta
+                </button>
             </div>
         </div>
     </div>
 
-    <hr class="my-4" />
-
-    <h4>Comentarios</h4>
-
-    <div class="mt-3">
-        <textarea class="form-control mb-2" @bind="NewCommentText" @bind:event="oninput" rows="3" placeholder="Escribe un comentario..." disabled="@(!IsLoggedIn)"></textarea>
-        <div class="d-flex align-items-center">
-            <button class="btn btn-success" @onclick="SubmitComment" disabled="@(!IsLoggedIn)">Enviar comentario</button>
-            @if (!IsLoggedIn)
-            {
-                <small class="text-muted ms-3">Inicia sesión para publicar comentarios.</small>
-            }
+    @if (!string.IsNullOrEmpty(mensajeExito))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @mensajeExito
+            <button type="button" class="btn-close" @onclick="() => mensajeExito = string.Empty"></button>
         </div>
-        @if (mostrarErrorComentario)
-        {
-            <div class="text-danger small mt-2">@mensajeErrorComentario</div>
-        }
-    </div>
+    }
+    @if (!string.IsNullOrEmpty(mensajeError))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @mensajeError
+            <button type="button" class="btn-close" @onclick="() => mensajeError = string.Empty"></button>
+        </div>
+    }
 
-    <div class="mt-4">
-        @if (Comments.Any())
-        {
-            @foreach (var c in Comments)
-            {
-                <div class="card mb-2">
-                    <div class="card-body py-2">
-                        <div class="d-flex justify-content-between">
-                            <strong>@(string.IsNullOrEmpty(c.CreadoPorUsuarioNombre) ? "Invitado" : c.CreadoPorUsuarioNombre)</strong>
-                            <small class="text-muted">@c.CreadoUtc.ToString("g")</small>
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-5 col-lg-4">
+                            <input type="text" class="form-control" placeholder="Buscar receta..."
+                                   @bind="busqueda" @bind:event="oninput" />
                         </div>
-                        <div>@c.Contenido</div>
+                        <div class="col-12 col-md-4 col-lg-3">
+                            <select class="form-select" @bind="categoriaFiltro">
+                                <option value="0">Todas las categorías</option>
+                                @if (categorias != null)
+                                {
+                                    @foreach (var cat in categorias)
+                                    {
+                                        <option value="@cat.Id">@cat.Nombre</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-3 col-lg-2">
+                            <button class="btn btn-outline-secondary w-100" @onclick="LimpiarFiltros">
+                                Limpiar
+                            </button>
+                        </div>
                     </div>
                 </div>
-            }
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        @if (recetas == null)
+        {
+            <div class="col-12 text-center py-5">
+                <div class="spinner-border text-brand" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+                <p class="text-muted mt-3">Cargando recetas...</p>
+            </div>
+        }
+        else if (!RecetasFiltradas.Any())
+        {
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <h5 class="alert-heading">No hay recetas</h5>
+                    <p class="mb-0">Comienza creando tu primera receta.</p>
+                </div>
+            </div>
         }
         else
         {
-            <div class="text-muted">Aún no hay comentarios.</div>
+            @foreach (var receta in RecetasFiltradas)
+            {
+                <div class="col-12 col-sm-6 col-lg-4 col-xl-3 mb-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title text-brand mb-0 me-2">@receta.Titulo</h5>
+                                @if (receta.EstaPublicado)
+                                {
+                                    <span class="badge bg-success">Publicado</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Borrador</span>
+                                }
+                            </div>
+
+                            <p class="card-text text-muted small flex-grow-1">
+                                @(string.IsNullOrEmpty(receta.Descripcion) ? "Sin descripción" : (receta.Descripcion.Length > 100 ? receta.Descripcion[..100] + "..." : receta.Descripcion))
+                            </p>
+
+                            <div class="d-flex gap-3 text-muted small mb-3">
+                                <span><span class="bi bi-clock me-1"></span>@(receta.TiempoPreparacionMinutos + receta.TiempoCoccionMinutos) min</span>
+                                <span><span class="bi bi-people me-1"></span>@receta.Porciones porc.</span>
+                            </div>
+
+                            <div class="d-flex gap-2 mt-auto">
+                                <button class="btn btn-sm btn-brand flex-grow-1"
+                                        @onclick="() => IrADetalle(receta.Id)">
+                                    Ver
+                                </button>
+                                <button class="btn btn-sm btn-outline-primary"
+                                        @onclick="() => IrAEditar(receta.Id)">
+                                    <span class="bi bi-pencil"></span>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger"
+                                        @onclick="() => EliminarReceta(receta.Id)">
+                                    <span class="bi bi-trash"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
         }
     </div>
 </div>
 
 @code {
-    private bool IsLoggedIn { get; set; } = false;
-    private string? CurrentUserId { get; set; }
-    private string? CurrentUserName { get; set; }
+    private List<RecetaDto>? recetas;
+    private List<CategoriaDto>? categorias;
+    private string busqueda = "";
+    private int categoriaFiltro = 0;
+    private string mensajeExito = string.Empty;
+    private string mensajeError = string.Empty;
 
-    private string NewCommentText { get; set; } = string.Empty;
-    private bool mostrarErrorComentario = false;
-    private string mensajeErrorComentario = string.Empty;
-
-    private RecipeDto Recipe { get; set; } = new RecipeDto
+    private IEnumerable<RecetaDto> RecetasFiltradas
     {
-        Title = "Tacos de pollo a la mexicana",
-        Author = "Chef Demo",
-        Time = 35,
-        ImageUrl = "https://via.placeholder.com/800x400.png?text=Receta+Demo",
-        Ingredients = new List<string>
+        get
         {
-            "500 g de pechuga de pollo",
-            "1 cebolla",
-            "2 tomates",
-            "Chiles al gusto",
-            "Tortillas",
-            "Sal y pimienta"
-        },
-        Steps = new List<string>
-        {
-            "Cortar el pollo en tiras y sazonar.",
-            "Sofreír cebolla y tomate.",
-            "Agregar el pollo y cocinar hasta dorar.",
-            "Calentar tortillas y servir con la preparación."
+            if (recetas == null) return Enumerable.Empty<RecetaDto>();
+
+            var resultado = recetas.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(busqueda))
+            {
+                resultado = resultado.Where(r =>
+                    r.Titulo.Contains(busqueda, StringComparison.OrdinalIgnoreCase) ||
+                    (r.Descripcion?.Contains(busqueda, StringComparison.OrdinalIgnoreCase) ?? false));
+            }
+
+            if (categoriaFiltro > 0)
+            {
+                resultado = resultado.Where(r => r.CategoriaIds.Contains(categoriaFiltro));
+            }
+
+            return resultado;
         }
-    };
-
-    private List<ComentarioDto> Comments { get; set; } = new List<ComentarioDto>
-    {
-        new ComentarioDto { CreadoPorUsuarioNombre = "Ana", Contenido = "Deliciosa receta, la probé hoy.", CreadoUtc = DateTime.Now.AddHours(-3) },
-        new ComentarioDto { CreadoPorUsuarioNombre = "Luis", Contenido = "Muy fácil de preparar.", CreadoUtc = DateTime.Now.AddDays(-1) }
-    };
+    }
 
     protected override async Task OnInitializedAsync()
     {
-        var authState = await authenticationStateTask;
-        var user = authState.User;
-        IsLoggedIn = user.Identity?.IsAuthenticated ?? false;
-        if (IsLoggedIn)
+        var tareaRecetas = recetaService.ObtenerTodas();
+        var tareaCategorias = categoriaService.ObtenerTodas();
+        await Task.WhenAll(tareaRecetas, tareaCategorias);
+        recetas = tareaRecetas.Result;
+        categorias = tareaCategorias.Result;
+    }
+
+    private async Task EliminarReceta(int id)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "¿Estás seguro de eliminar esta receta?"))
+            return;
+
+        mensajeError = string.Empty;
+        mensajeExito = string.Empty;
+
+        var resultado = await recetaService.Eliminar(id);
+
+        if (resultado)
         {
-            CurrentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? user.FindFirst("sub")?.Value;
-            CurrentUserName = user.Identity?.Name ?? user.FindFirst("name")?.Value ?? user.FindFirst("preferred_username")?.Value ?? user.FindFirst("email")?.Value;
+            mensajeExito = "Receta eliminada exitosamente";
+            recetas = await recetaService.ObtenerTodas();
+        }
+        else
+        {
+            mensajeError = "No se pudo eliminar la receta";
         }
     }
 
-    private void SubmitComment()
+    private void IrACrear() => navigation.NavigateTo("/recetas/crear");
+    private void IrADetalle(int id) => navigation.NavigateTo($"/recetas/{id}");
+    private void IrAEditar(int id) => navigation.NavigateTo($"/recetas/editar/{id}");
+
+    private void LimpiarFiltros()
     {
-        mostrarErrorComentario = false;
-        mensajeErrorComentario = string.Empty;
-
-        if (!IsLoggedIn)
-        {
-            mostrarErrorComentario = true;
-            mensajeErrorComentario = "Debes iniciar sesión para publicar un comentario.";
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(NewCommentText))
-        {
-            mostrarErrorComentario = true;
-            mensajeErrorComentario = "El comentario no puede estar vacío.";
-            return;
-        }
-
-        var nuevo = new ComentarioDto
-        {
-            Contenido = NewCommentText.Trim(),
-            CreadoUtc = DateTime.Now,
-            CreadoPorUsuarioId = CurrentUserId,
-            CreadoPorUsuarioNombre = CurrentUserName,
-            RecetaId = Recipe.Id
-        };
-
-        Comments.Insert(0, nuevo);
-        NewCommentText = string.Empty;
-    }
-
-    private class RecipeDto
-    {
-        public int Id { get; set; }
-        public string Title { get; set; } = string.Empty;
-        public string Author { get; set; } = string.Empty;
-        public int Time { get; set; }
-        public string ImageUrl { get; set; } = string.Empty;
-        public List<string> Ingredients { get; set; } = new();
-        public List<string> Steps { get; set; } = new();
+        busqueda = "";
+        categoriaFiltro = 0;
     }
 }

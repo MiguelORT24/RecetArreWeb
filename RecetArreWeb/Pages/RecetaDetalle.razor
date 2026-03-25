@@ -1,0 +1,76 @@
+﻿@page "/recetas/{Id:int}"
+@inject IRecetaService recetaService
+@inject IComentarioService comentarioService
+@inject NavigationManager navigation
+
+<PageTitle>Detalle Receta</PageTitle>
+
+<div class="container py-4">
+    <button class="btn btn-outline-secondary btn-sm mb-3" @onclick="() => navigation.NavigateTo('/recetas')">
+        <span class="bi bi-arrow-left me-1"></span> Volver
+    </button>
+
+    @if (receta == null)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-brand" role="status"></div>
+            <p class="text-muted mt-3">Cargando receta...</p>
+        </div>
+    }
+    else
+    {
+        <div class="card mb-4">
+            <div class="card-body">
+                <h3>@receta.Titulo</h3>
+                <p class="text-muted">@(string.IsNullOrEmpty(receta.Descripcion) ? "Sin descripción" : receta.Descripcion)</p>
+                <div class="mb-3">
+                    <strong>Tiempo:</strong> @(receta.TiempoPreparacionMinutos + receta.TiempoCoccionMinutos) min
+                </div>
+                <div>
+                    <h5>Instrucciones</h5>
+                    <p>@receta.Instrucciones</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <h5>Comentarios</h5>
+                @if (comentarios == null)
+                {
+                    <div class="text-muted">Cargando comentarios...</div>
+                }
+                else if (!comentarios.Any())
+                {
+                    <div class="text-muted">Aún no hay comentarios.</div>
+                }
+                else
+                {
+                    @foreach (var c in comentarios)
+                    {
+                        <div class="mb-2">
+                            <strong>@(string.IsNullOrEmpty(c.CreadoPorUsuarioNombre) ? "Invitado" : c.CreadoPorUsuarioNombre)</strong>
+                            <small class="text-muted ms-2">@c.CreadoUtc.ToString("g")</small>
+                            <div>@c.Contenido</div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private RecetaDto? receta;
+    private List<ComentarioDto>? comentarios;
+
+    protected override async Task OnInitializedAsync()
+    {
+        receta = await recetaService.ObtenerPorId(Id);
+        comentarios = await comentarioService.ObtenerPorReceta(Id);
+        if (receta == null)
+            navigation.NavigateTo("/recetas");
+    }
+}

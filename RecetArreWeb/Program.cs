@@ -31,6 +31,12 @@ builder.Services.AddScoped<HttpClient>(sp =>
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICategoriaService, CategoriaService>();
+// Registrar servicio de recetas
+builder.Services.AddScoped<IRecetaService, RecetaService>();
+// Registrar servicio de comentarios e ingredientes
+builder.Services.AddScoped<IComentarioService, ComentarioService>();
+// Ingrediente service - agregar implementación si existe
+// builder.Services.AddScoped<IIngredienteService, IngredienteService>();
 // TODO: Todos los demás servicios ejemplo ICategoriaService, IRecetaService, etc
 
 //Configurar autenticación

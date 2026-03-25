@@ -8,6 +8,7 @@ namespace RecetArreWeb.Services
     public interface ICategoriaService
     {
         Task<List<CategoriaDto>> ObtenerTodasCategorias();
+        Task<List<CategoriaDto>> ObtenerTodas();
         Task<CategoriaDto?> ObtenerCategoriaPorId(int id);
         Task<CategoriaDto?> CrearCategoria(CategoriaCreacionDto categoria);
         Task<bool> ActualizarCategoria(int id, CategoriaModificacionDto categoriaModificacionDto);
@@ -112,6 +113,12 @@ namespace RecetArreWeb.Services
                 Console.WriteLine($"Error al eliminar la categoría {id}: {ex.Message}");
                 return false;
             }
+        }
+
+        // Compatibility wrapper used by pages
+        public Task<List<CategoriaDto>> ObtenerTodas()
+        {
+            return ObtenerTodasCategorias();
         }
     }
 }
