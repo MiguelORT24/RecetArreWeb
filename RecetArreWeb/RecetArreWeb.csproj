@@ -6,6 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <!-- Razor pages are discovered automatically by the Blazor SDK. Do not include .razor files as Compile items. -->
+
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authorization" Version="8.0.24" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="8.0.24" />
