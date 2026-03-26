@@ -1,4 +1,4 @@
-﻿@page "/recetas/{Id:int}"
+@page "/recetas/{Id:int}"
 @inject IRecetaService recetaService
 @inject IComentarioService comentarioService
 @inject NavigationManager navigation
@@ -6,7 +6,7 @@
 <PageTitle>Detalle Receta</PageTitle>
 
 <div class="container py-4">
-    <button class="btn btn-outline-secondary btn-sm mb-3" @onclick="() => navigation.NavigateTo('/recetas')">
+    <button class="btn btn-outline-secondary btn-sm mb-3" @onclick="@(() => navigation.NavigateTo("/recetas"))">
         <span class="bi bi-arrow-left me-1"></span> Volver
     </button>
 
@@ -19,38 +19,107 @@
     }
     else
     {
-        <div class="card mb-4">
+        <div class="card mb-4 border-0 shadow-sm">
             <div class="card-body">
-                <h3>@receta.Titulo</h3>
-                <p class="text-muted">@(string.IsNullOrEmpty(receta.Descripcion) ? "Sin descripción" : receta.Descripcion)</p>
-                <div class="mb-3">
-                    <strong>Tiempo:</strong> @(receta.TiempoPreparacionMinutos + receta.TiempoCoccionMinutos) min
-                </div>
-                <div>
-                    <h5>Instrucciones</h5>
-                    <p>@receta.Instrucciones</p>
-                </div>
+                <h3 class="text-brand">@receta.Nombre</h3>
+
+                <p class="text-muted small mb-3">
+                    <span class="bi bi-calendar me-1"></span>
+                    Creada el @receta.CreadoUtc.ToString("dd/MM/yyyy")
+                </p>
+
+                @if (receta.Ingredientes != null && receta.Ingredientes.Any())
+                {
+                    <div class="mb-3">
+                        <h5>Ingredientes</h5>
+                        <ul class="list-group list-group-flush">
+                            @foreach (var ing in receta.Ingredientes)
+                            {
+                                <li class="list-group-item px-0">
+                                    <span class="bi bi-check2 text-brand me-1"></span>
+                                    @ing.Nombre
+                                    <span class="text-muted small">(@ing.UnidadMedida)</span>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(receta.Instrucciones))
+                {
+                    <div>
+                        <h5>Instrucciones</h5>
+                        <p style="white-space: pre-wrap;">@receta.Instrucciones</p>
+                    </div>
+                }
             </div>
         </div>
 
-        <div class="card">
+        <!-- Sección de Comentarios -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <span class="bi bi-chat-dots me-2"></span>Comentarios
+                    @if (comentarios != null)
+                    {
+                        <span class="badge bg-secondary ms-1">@comentarios.Count</span>
+                    }
+                </h5>
+            </div>
             <div class="card-body">
-                <h5>Comentarios</h5>
+
+                @if (!string.IsNullOrEmpty(mensajeErrorComentario))
+                {
+                    <div class="alert alert-danger alert-dismissible fade show py-2" role="alert">
+                        @mensajeErrorComentario
+                        <button type="button" class="btn-close" @onclick="() => mensajeErrorComentario = string.Empty"></button>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(mensajeExitoComentario))
+                {
+                    <div class="alert alert-success alert-dismissible fade show py-2" role="alert">
+                        @mensajeExitoComentario
+                        <button type="button" class="btn-close" @onclick="() => mensajeExitoComentario = string.Empty"></button>
+                    </div>
+                }
+
+                <!-- Formulario nuevo comentario -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Añadir comentario</label>
+                    <textarea class="form-control mb-2" rows="3" @bind="nuevoContenido"
+                              placeholder="Escribe tu comentario sobre esta receta..."></textarea>
+                    <button class="btn btn-brand btn-sm" @onclick="AgregarComentario" disabled="@enviandoComentario">
+                        @if (enviandoComentario)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        Publicar comentario
+                    </button>
+                </div>
+
+                <hr />
+
+                <!-- Lista de comentarios de esta receta -->
                 @if (comentarios == null)
                 {
                     <div class="text-muted">Cargando comentarios...</div>
                 }
                 else if (!comentarios.Any())
                 {
-                    <div class="text-muted">Aún no hay comentarios.</div>
+                    <div class="text-muted fst-italic">Aún no hay comentarios para esta receta. ¡Sé el primero!</div>
                 }
                 else
                 {
                     @foreach (var c in comentarios)
                     {
-                        <div class="mb-2">
-                            <strong>@(string.IsNullOrEmpty(c.CreadoPorUsuarioNombre) ? "Invitado" : c.CreadoPorUsuarioNombre)</strong>
-                            <small class="text-muted ms-2">@c.CreadoUtc.ToString("g")</small>
+                        <div class="mb-3 p-3 rounded bg-light">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong>
+                                    <span class="bi bi-person-circle me-1"></span>
+                                    @(string.IsNullOrEmpty(c.CreadoPorUsuarioNombre) ? "Invitado" : c.CreadoPorUsuarioNombre)
+                                </strong>
+                                <small class="text-muted">@c.CreadoUtc.ToString("dd/MM/yyyy HH:mm")</small>
+                            </div>
                             <div>@c.Contenido</div>
                         </div>
                     }
@@ -66,11 +135,67 @@
     private RecetaDto? receta;
     private List<ComentarioDto>? comentarios;
 
+    private string nuevoContenido = "";
+    private bool enviandoComentario = false;
+    private string mensajeErrorComentario = string.Empty;
+    private string mensajeExitoComentario = string.Empty;
+
     protected override async Task OnInitializedAsync()
     {
         receta = await recetaService.ObtenerPorId(Id);
-        comentarios = await comentarioService.ObtenerPorReceta(Id);
         if (receta == null)
+        {
             navigation.NavigateTo("/recetas");
+            return;
+        }
+        await CargarComentarios();
+    }
+
+    private async Task CargarComentarios()
+    {
+        comentarios = await comentarioService.ObtenerPorReceta(Id);
+    }
+
+    private async Task AgregarComentario()
+    {
+        if (string.IsNullOrWhiteSpace(nuevoContenido))
+        {
+            mensajeErrorComentario = "El comentario no puede estar vacío.";
+            return;
+        }
+
+        enviandoComentario = true;
+        mensajeErrorComentario = string.Empty;
+        mensajeExitoComentario = string.Empty;
+
+        try
+        {
+            var dto = new ComentarioCreacionDto
+            {
+                Contenido = nuevoContenido.Trim(),
+                RecetaId = Id        // FK a la receta actual
+            };
+
+            var resultado = await comentarioService.Crear(dto);
+
+            if (resultado != null)
+            {
+                nuevoContenido = "";
+                mensajeExitoComentario = "Comentario publicado.";
+                await CargarComentarios();
+            }
+            else
+            {
+                mensajeErrorComentario = "No se pudo publicar el comentario.";
+            }
+        }
+        catch (Exception ex)
+        {
+            mensajeErrorComentario = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            enviandoComentario = false;
+        }
     }
 }

@@ -1,9 +1,8 @@
-﻿@page "/recetas/crear"
+@page "/recetas/crear"
 @page "/recetas/editar/{Id:int}"
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
 @inject IRecetaService recetaService
-@inject ICategoriaService categoriaService
 @inject IIngredienteService ingredienteService
 @inject NavigationManager navigation
 
@@ -37,147 +36,87 @@
     }
     else
     {
-        <EditForm Model="modelo" OnValidSubmit="HandleSubmit">
-            <DataAnnotationsValidator />
-
-            <div class="row">
-                <div class="col-12 col-lg-8">
-                    <div class="card border-0 shadow-sm mb-4">
-                        <div class="card-header bg-white">
-                            <h5 class="mb-0">Información General</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label class="form-label">Título <span class="text-danger">*</span></label>
-                                <InputText @bind-Value="modelo.Titulo" class="form-control"
-                                           placeholder="Ej: Pasta a la boloñesa..." />
-                                <ValidationMessage For="@(() => modelo.Titulo)" />
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Descripción</label>
-                                <InputTextArea @bind-Value="modelo.Descripcion" class="form-control" rows="3"
-                                               placeholder="Breve descripción de la receta..." />
-                                <ValidationMessage For="@(() => modelo.Descripcion)" />
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Instrucciones <span class="text-danger">*</span></label>
-                                <InputTextArea @bind-Value="modelo.Instrucciones" class="form-control" rows="8"
-                                               placeholder="Paso 1: ..." />
-                                <ValidationMessage For="@(() => modelo.Instrucciones)" />
-                            </div>
-                        </div>
+        <div class="row">
+            <div class="col-12 col-lg-8">
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">Información General</h5>
                     </div>
-
-                    <div class="card border-0 shadow-sm mb-4">
-                        <div class="card-header bg-white">
-                            <h5 class="mb-0">Categorías e Ingredientes</h5>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" @bind="modelo.Nombre"
+                                   placeholder="Ej: Pasta a la boloñesa..." />
                         </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label class="form-label">Categorías</label>
-                                @if (categorias != null)
-                                {
-                                    <div class="row g-2">
-                                        @foreach (var cat in categorias)
-                                        {
-                                            <div class="col-auto">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" id="cat-@cat.Id"
-                                                           checked="@modelo.CategoriaIds.Contains(cat.Id)"
-                                                           @onchange="e => ToggleCategoria(cat.Id, (bool)(e.Value ?? false))" />
-                                                    <label class="form-check-label" for="cat-@cat.Id">@cat.Nombre</label>
-                                                </div>
-                                            </div>
-                                        }
-                                    </div>
-                                }
-                            </div>
 
-                            <div class="mb-3">
-                                <label class="form-label">Ingredientes</label>
-                                @if (ingredientes != null)
-                                {
-                                    <div class="row g-2">
-                                        @foreach (var ing in ingredientes)
-                                        {
-                                            <div class="col-auto">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" id="ing-@ing.Id"
-                                                           checked="@modelo.IngredienteIds.Contains(ing.Id)"
-                                                           @onchange="e => ToggleIngrediente(ing.Id, (bool)(e.Value ?? false))" />
-                                                    <label class="form-check-label" for="ing-@ing.Id">@ing.Nombre</label>
-                                                </div>
-                                            </div>
-                                        }
-                                    </div>
-                                }
-                            </div>
+                        <div class="mb-3">
+                            <label class="form-label">Instrucciones</label>
+                            <textarea class="form-control" rows="8" @bind="modelo.Instrucciones"
+                                      placeholder="Paso 1: ..."></textarea>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-12 col-lg-4">
-                    <div class="card border-0 shadow-sm mb-4">
-                        <div class="card-header bg-white">
-                            <h5 class="mb-0">Detalles</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label class="form-label">Tiempo de preparación (min)</label>
-                                <InputNumber @bind-Value="modelo.TiempoPreparacionMinutos" class="form-control" />
-                                <ValidationMessage For="@(() => modelo.TiempoPreparacionMinutos)" />
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Tiempo de cocción (min)</label>
-                                <InputNumber @bind-Value="modelo.TiempoCoccionMinutos" class="form-control" />
-                                <ValidationMessage For="@(() => modelo.TiempoCoccionMinutos)" />
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Porciones</label>
-                                <InputNumber @bind-Value="modelo.Porciones" class="form-control" />
-                                <ValidationMessage For="@(() => modelo.Porciones)" />
-                            </div>
-
-                            <div class="mb-3 form-check form-switch">
-                                <InputCheckbox @bind-Value="modelo.EstaPublicado" class="form-check-input" id="publicado" />
-                                <label class="form-check-label" for="publicado">Publicar receta</label>
-                            </div>
-                        </div>
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">Ingredientes</h5>
                     </div>
-
-                    <div class="card border-0 shadow-sm mb-4">
-                        <div class="card-body">
-                            <div class="d-grid gap-2">
-                                <button type="submit" class="btn btn-brand" disabled="@guardando">
-                                    @if (guardando)
-                                    {
-                                        <span class="spinner-border spinner-border-sm me-2"></span>
-                                    }
-                                    @(Id == null ? "Crear Receta" : "Guardar Cambios")
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary"
-                                        @onclick="VolverARecetas">
-                                    Cancelar
-                                </button>
+                    <div class="card-body">
+                        @if (ingredientes == null || !ingredientes.Any())
+                        {
+                            <p class="text-muted">No hay ingredientes disponibles. Crea ingredientes primero.</p>
+                        }
+                        else
+                        {
+                            <div class="row g-2">
+                                @foreach (var ing in ingredientes)
+                                {
+                                    <div class="col-12 col-sm-6 col-md-4">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="ing-@ing.Id"
+                                                   checked="@(modelo.IngredienteIds != null && modelo.IngredienteIds.Contains(ing.Id))"
+                                                   @onchange="e => ToggleIngrediente(ing.Id, (bool)(e.Value ?? false))" />
+                                            <label class="form-check-label" for="ing-@ing.Id">
+                                                @ing.Nombre
+                                                <small class="text-muted">(@ing.UnidadMedida)</small>
+                                            </label>
+                                        </div>
+                                    </div>
+                                }
                             </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-brand" @onclick="HandleSubmit" disabled="@guardando">
+                                @if (guardando)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                @(Id == null ? "Crear Receta" : "Guardar Cambios")
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary"
+                                    @onclick="VolverARecetas">
+                                Cancelar
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
-        </EditForm>
+        </div>
     }
 </div>
 
 @code {
     [Parameter] public int? Id { get; set; }
 
-    private RecetaCreacionDto modelo = new();
-    private List<CategoriaDto>? categorias;
-    private List<IngredienteDto>? ingredientes;
+    private RecetaCreacionDto modelo = new() { IngredienteIds = new List<int>() };
+    private List<IngredientesDto>? ingredientes;
     private bool cargando = true;
     private bool guardando = false;
     private string mensajeError = string.Empty;
@@ -186,11 +125,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var tareaCategorias = categoriaService.ObtenerTodas();
-        var tareaIngredientes = ingredienteService.ObtenerTodos();
-        await Task.WhenAll(tareaCategorias, tareaIngredientes);
-        categorias = tareaCategorias.Result;
-        ingredientes = tareaIngredientes.Result;
+        ingredientes = await ingredienteService.ObtenerTodos();
 
         if (Id.HasValue)
         {
@@ -203,31 +138,18 @@
 
             modelo = new RecetaCreacionDto
             {
-                Titulo = receta.Titulo,
-                Descripcion = receta.Descripcion,
+                Nombre = receta.Nombre,
                 Instrucciones = receta.Instrucciones,
-                TiempoPreparacionMinutos = receta.TiempoPreparacionMinutos,
-                TiempoCoccionMinutos = receta.TiempoCoccionMinutos,
-                Porciones = receta.Porciones,
-                EstaPublicado = receta.EstaPublicado,
-                CategoriaIds = receta.CategoriaIds,
-                IngredienteIds = receta.IngredienteIds
+                IngredienteIds = receta.Ingredientes?.Select(i => i.Id).ToList() ?? new List<int>()
             };
         }
 
         cargando = false;
     }
 
-    private void ToggleCategoria(int id, bool seleccionado)
-    {
-        if (seleccionado && !modelo.CategoriaIds.Contains(id))
-            modelo.CategoriaIds.Add(id);
-        else if (!seleccionado)
-            modelo.CategoriaIds.Remove(id);
-    }
-
     private void ToggleIngrediente(int id, bool seleccionado)
     {
+        modelo.IngredienteIds ??= new List<int>();
         if (seleccionado && !modelo.IngredienteIds.Contains(id))
             modelo.IngredienteIds.Add(id);
         else if (!seleccionado)
@@ -236,6 +158,12 @@
 
     private async Task HandleSubmit()
     {
+        if (string.IsNullOrWhiteSpace(modelo.Nombre))
+        {
+            mensajeError = "El nombre es requerido";
+            return;
+        }
+
         guardando = true;
         mensajeError = string.Empty;
 
@@ -245,14 +173,8 @@
             {
                 var modificacion = new RecetaModificacionDto
                 {
-                    Titulo = modelo.Titulo,
-                    Descripcion = modelo.Descripcion,
+                    Nombre = modelo.Nombre,
                     Instrucciones = modelo.Instrucciones,
-                    TiempoPreparacionMinutos = modelo.TiempoPreparacionMinutos,
-                    TiempoCoccionMinutos = modelo.TiempoCoccionMinutos,
-                    Porciones = modelo.Porciones,
-                    EstaPublicado = modelo.EstaPublicado,
-                    CategoriaIds = modelo.CategoriaIds,
                     IngredienteIds = modelo.IngredienteIds
                 };
 

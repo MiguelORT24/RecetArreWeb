@@ -1,4 +1,4 @@
-﻿@page "/ingredientes"
+@page "/ingredientes"
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
 @inject IIngredienteService ingredienteService
@@ -107,8 +107,12 @@
                                 </div>
                             </div>
 
+                            <p class="card-text text-muted small">
+                                <span class="bi bi-rulers me-1"></span>@ingrediente.UnidadMedida
+                            </p>
+
                             <p class="card-text text-muted small flex-grow-1">
-                                @(string.IsNullOrEmpty(ingrediente.Notas) ? "Sin notas" : ingrediente.Notas)
+                                @(string.IsNullOrEmpty(ingrediente.Descripcion) ? "Sin descripción" : ingrediente.Descripcion)
                             </p>
 
                             <div class="border-top pt-2 mt-auto">
@@ -137,7 +141,8 @@
                                 <tr>
                                     <th scope="col">ID</th>
                                     <th scope="col">Nombre</th>
-                                    <th scope="col">Notas</th>
+                                    <th scope="col">Unidad de Medida</th>
+                                    <th scope="col">Descripción</th>
                                     <th scope="col">Fecha Creación</th>
                                     <th scope="col" class="text-end">Acciones</th>
                                 </tr>
@@ -150,7 +155,8 @@
                                         <tr>
                                             <td>@ingrediente.Id</td>
                                             <td class="fw-semibold">@ingrediente.Nombre</td>
-                                            <td class="text-muted">@(string.IsNullOrEmpty(ingrediente.Notas) ? "-" : ingrediente.Notas)</td>
+                                            <td>@ingrediente.UnidadMedida</td>
+                                            <td class="text-muted">@(string.IsNullOrEmpty(ingrediente.Descripcion) ? "-" : ingrediente.Descripcion)</td>
                                             <td>@ingrediente.CreadoUtc.ToString("dd/MM/yyyy HH:mm")</td>
                                             <td class="text-end">
                                                 <button class="btn btn-sm btn-outline-primary me-1"
@@ -168,7 +174,7 @@
                                 else
                                 {
                                     <tr>
-                                        <td colspan="5" class="text-center text-muted py-4">
+                                        <td colspan="6" class="text-center text-muted py-4">
                                             No hay ingredientes para mostrar
                                         </td>
                                     </tr>
@@ -198,9 +204,14 @@
                                placeholder="Ej: Tomate, Cebolla..." />
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Notas</label>
-                        <textarea class="form-control" rows="3" @bind="notasIngrediente"
-                                  placeholder="Notas adicionales sobre el ingrediente..."></textarea>
+                        <label class="form-label">Unidad de Medida <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" @bind="unidadMedidaIngrediente"
+                               placeholder="Ej: gramos, ml, tazas..." />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <textarea class="form-control" rows="3" @bind="descripcionIngrediente"
+                                  placeholder="Descripción adicional sobre el ingrediente..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -215,28 +226,30 @@
 }
 
 @code {
-    private List<IngredienteDto>? ingredientes;
+    private List<IngredientesDto>? ingredientes;
     private string busqueda = "";
     private bool mostrarModal = false;
     private bool guardando = false;
-    private IngredienteDto? ingredienteEditando = null;
+    private IngredientesDto? ingredienteEditando = null;
     private string nombreIngrediente = "";
-    private string notasIngrediente = "";
+    private string unidadMedidaIngrediente = "";
+    private string descripcionIngrediente = "";
     private string mensajeError = string.Empty;
     private string mensajeExito = string.Empty;
 
-    private IEnumerable<IngredienteDto> IngredientesFiltrados
+    private IEnumerable<IngredientesDto> IngredientesFiltrados
     {
         get
         {
-            if (ingredientes == null) return Enumerable.Empty<IngredienteDto>();
+            if (ingredientes == null) return Enumerable.Empty<IngredientesDto>();
 
             if (string.IsNullOrWhiteSpace(busqueda))
                 return ingredientes;
 
             return ingredientes.Where(i =>
                 i.Nombre.Contains(busqueda, StringComparison.OrdinalIgnoreCase) ||
-                (i.Notas?.Contains(busqueda, StringComparison.OrdinalIgnoreCase) ?? false)
+                (i.Descripcion?.Contains(busqueda, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                i.UnidadMedida.Contains(busqueda, StringComparison.OrdinalIgnoreCase)
             );
         }
     }
@@ -255,7 +268,7 @@
         catch (Exception ex)
         {
             mensajeError = $"Error al cargar ingredientes: {ex.Message}";
-            ingredientes = new List<IngredienteDto>();
+            ingredientes = new List<IngredientesDto>();
         }
     }
 
@@ -263,16 +276,18 @@
     {
         ingredienteEditando = null;
         nombreIngrediente = "";
-        notasIngrediente = "";
+        unidadMedidaIngrediente = "";
+        descripcionIngrediente = "";
         mensajeError = string.Empty;
         mostrarModal = true;
     }
 
-    private void AbrirModalEditar(IngredienteDto ingrediente)
+    private void AbrirModalEditar(IngredientesDto ingrediente)
     {
         ingredienteEditando = ingrediente;
         nombreIngrediente = ingrediente.Nombre;
-        notasIngrediente = ingrediente.Notas ?? "";
+        unidadMedidaIngrediente = ingrediente.UnidadMedida;
+        descripcionIngrediente = ingrediente.Descripcion ?? "";
         mensajeError = string.Empty;
         mostrarModal = true;
     }
@@ -282,7 +297,8 @@
         mostrarModal = false;
         ingredienteEditando = null;
         nombreIngrediente = "";
-        notasIngrediente = "";
+        unidadMedidaIngrediente = "";
+        descripcionIngrediente = "";
         mensajeError = string.Empty;
     }
 
@@ -291,6 +307,11 @@
         if (string.IsNullOrWhiteSpace(nombreIngrediente))
         {
             mensajeError = "El nombre es requerido";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(unidadMedidaIngrediente))
+        {
+            mensajeError = "La unidad de medida es requerida";
             return;
         }
 
@@ -305,7 +326,8 @@
                 var nuevo = new IngredienteCreacionDto
                 {
                     Nombre = nombreIngrediente,
-                    Notas = string.IsNullOrWhiteSpace(notasIngrediente) ? null : notasIngrediente
+                    UnidadMedida = unidadMedidaIngrediente,
+                    Descripcion = string.IsNullOrWhiteSpace(descripcionIngrediente) ? null : descripcionIngrediente
                 };
 
                 var resultado = await ingredienteService.Crear(nuevo);
@@ -326,7 +348,8 @@
                 var modificacion = new IngredienteModificacionDto
                 {
                     Nombre = nombreIngrediente,
-                    Notas = string.IsNullOrWhiteSpace(notasIngrediente) ? null : notasIngrediente
+                    UnidadMedida = unidadMedidaIngrediente,
+                    Descripcion = string.IsNullOrWhiteSpace(descripcionIngrediente) ? null : descripcionIngrediente
                 };
 
                 var resultado = await ingredienteService.Actualizar(ingredienteEditando.Id, modificacion);

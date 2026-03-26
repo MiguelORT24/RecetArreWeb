@@ -35,8 +35,8 @@ builder.Services.AddScoped<ICategoriaService, CategoriaService>();
 builder.Services.AddScoped<IRecetaService, RecetaService>();
 // Registrar servicio de comentarios e ingredientes
 builder.Services.AddScoped<IComentarioService, ComentarioService>();
-// Ingrediente service - agregar implementación si existe
-// builder.Services.AddScoped<IIngredienteService, IngredienteService>();
+// Ingrediente service
+builder.Services.AddScoped<IIngredienteService, IngredienteService>();
 // TODO: Todos los demás servicios ejemplo ICategoriaService, IRecetaService, etc
 
 //Configurar autenticación
