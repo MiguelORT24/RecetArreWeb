@@ -16,6 +16,10 @@ namespace RecetArreWeb.DTOs
 
         // Lista de tiempos asociados a la receta 
         public List<TiempoDto>? Tiempos { get; set; }
+
+        // Información de calificaciones
+        public double? PromedioCalificaciones { get; set; }
+        public int TotalCalificaciones { get; set; }
     }
 
     public class RecetaCreacionDto

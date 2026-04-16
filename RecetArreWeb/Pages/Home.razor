@@ -1,7 +1,296 @@
 ﻿@page "/"
+@inject IRecetaService recetaService
+@inject NavigationManager navigation
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Inicio - RecetArre</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="container py-4">
+    <!-- Sección Hero -->
+    <div class="row mb-5">
+        <div class="col-lg-8 mx-auto text-center">
+            <h1 class="display-4 text-brand mb-3">RecetArre</h1>
+            <p class="lead text-muted">Descubre las mejores recetas de la comunidad</p>
+        </div>
+    </div>
 
-Welcome to your new app.
+    <!-- Sección de Ranking -->
+    <div class="row mb-5">
+        <div class="col-lg-10 mx-auto">
+            <h2 class="text-center text-brand mb-4">
+                <span class="bi bi-trophy me-2"></span>Ranking de Recetas
+            </h2>
+
+            @if (cargandoRanking)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-brand" role="status"></div>
+                    <p class="text-muted mt-3">Cargando ranking...</p>
+                </div>
+            }
+            else if (ranking != null && ranking.Count > 0)
+            {
+                <div class="podium-container">
+                    <div class="row align-items-flex-end justify-content-center g-3">
+                        <!-- 2do lugar (izquierda) -->
+                        @if (ranking.Count >= 2)
+                        {
+                            <div class="col-lg-4 col-md-6">
+                                <div class="podium-card podium-second" @onclick="@(() => IrAReceta(ranking[1].Id))">
+                                    <div class="podium-position">
+                                        <span class="badge bg-secondary position-badge">2</span>
+                                    </div>
+                                    <div class="podium-content text-center">
+                                        <div class="podium-number">🥈</div>
+                                        <h5 class="podium-title mt-2">@ranking[1].Nombre</h5>
+                                        <div class="podium-rating mt-2">
+                                            <span class="text-warning">
+                                                @for (int i = 0; i < (int)ranking[1].PromedioCalificacion; i++)
+                                                {
+                                                    <span class="bi bi-star-fill"></span>
+                                                }
+                                                @if (ranking[1].PromedioCalificacion % 1 != 0)
+                                                {
+                                                    <span class="bi bi-star-half"></span>
+                                                }
+                                            </span>
+                                        </div>
+                                        <p class="podium-score mt-2 mb-0">
+                                            <strong>@ranking[1].PromedioCalificacion.ToString("F1")</strong> / 5
+                                        </p>
+                                        <small class="text-muted">(@ranking[1].TotalCalificaciones voto@(ranking[1].TotalCalificaciones != 1 ? "s" : ""))</small>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+
+                        <!-- 1er lugar (centro) -->
+                        @if (ranking.Count >= 1)
+                        {
+                            <div class="col-lg-4 col-md-6">
+                                <div class="podium-card podium-first">
+                                    <div class="podium-position">
+                                        <span class="badge bg-warning text-dark position-badge position-badge-lg">1</span>
+                                    </div>
+                                    <div class="podium-content text-center" @onclick="@(() => IrAReceta(ranking[0].Id))">
+                                        <div class="podium-number">🥇</div>
+                                        <h4 class="podium-title mt-2 fw-bold">@ranking[0].Nombre</h4>
+                                        <div class="podium-rating mt-2">
+                                            <span class="text-warning">
+                                                @for (int i = 0; i < (int)ranking[0].PromedioCalificacion; i++)
+                                                {
+                                                    <span class="bi bi-star-fill"></span>
+                                                }
+                                                @if (ranking[0].PromedioCalificacion % 1 != 0)
+                                                {
+                                                    <span class="bi bi-star-half"></span>
+                                                }
+                                            </span>
+                                        </div>
+                                        <p class="podium-score mt-2 mb-0">
+                                            <strong>@ranking[0].PromedioCalificacion.ToString("F1")</strong> / 5
+                                        </p>
+                                        <small class="text-muted">(@ranking[0].TotalCalificaciones voto@(ranking[0].TotalCalificaciones != 1 ? "s" : ""))</small>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+
+                        <!-- 3er lugar (derecha) -->
+                        @if (ranking.Count >= 3)
+                        {
+                            <div class="col-lg-4 col-md-6">
+                                <div class="podium-card podium-third" @onclick="@(() => IrAReceta(ranking[2].Id))">
+                                    <div class="podium-position">
+                                        <span class="badge bg-danger position-badge">3</span>
+                                    </div>
+                                    <div class="podium-content text-center">
+                                        <div class="podium-number">🥉</div>
+                                        <h5 class="podium-title mt-2">@ranking[2].Nombre</h5>
+                                        <div class="podium-rating mt-2">
+                                            <span class="text-warning">
+                                                @for (int i = 0; i < (int)ranking[2].PromedioCalificacion; i++)
+                                                {
+                                                    <span class="bi bi-star-fill"></span>
+                                                }
+                                                @if (ranking[2].PromedioCalificacion % 1 != 0)
+                                                {
+                                                    <span class="bi bi-star-half"></span>
+                                                }
+                                            </span>
+                                        </div>
+                                        <p class="podium-score mt-2 mb-0">
+                                            <strong>@ranking[2].PromedioCalificacion.ToString("F1")</strong> / 5
+                                        </p>
+                                        <small class="text-muted">(@ranking[2].TotalCalificaciones voto@(ranking[2].TotalCalificaciones != 1 ? "s" : ""))</small>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="text-center mt-4">
+                    <a href="/recetas" class="btn btn-brand btn-lg">
+                        <span class="bi bi-search me-2"></span>Ver todas las recetas
+                    </a>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info text-center py-4">
+                    <span class="bi bi-info-circle me-2"></span>
+                    No hay recetas disponibles aún. ¡Sé el primero en crear una!
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .podium-container {
+        margin: 3rem 0;
+    }
+
+    .podium-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px;
+        padding: 2rem 1rem;
+        position: relative;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        min-height: 350px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        color: white;
+    }
+
+    .podium-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .podium-first {
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        transform: scale(1.05);
+        min-height: 400px;
+    }
+
+    .podium-first:hover {
+        transform: scale(1.05) translateY(-10px);
+    }
+
+    .podium-second {
+        background: linear-gradient(135deg, #C0C0C0 0%, #808080 100%);
+    }
+
+    .podium-third {
+        background: linear-gradient(135deg, #CD7F32 0%, #8B4513 100%);
+    }
+
+    .podium-position {
+        position: absolute;
+        top: -15px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    .position-badge {
+        font-size: 1.5rem;
+        padding: 0.5rem 0.75rem;
+        font-weight: bold;
+    }
+
+    .position-badge-lg {
+        font-size: 1.8rem;
+        padding: 0.6rem 0.9rem;
+    }
+
+    .podium-number {
+        font-size: 3rem;
+    }
+
+    .podium-title {
+        font-weight: 600;
+        margin: 1rem 0;
+        font-size: 1.3rem;
+        word-break: break-word;
+    }
+
+    .podium-rating {
+        font-size: 1.5rem;
+        letter-spacing: 0.1rem;
+    }
+
+    .podium-score {
+        font-size: 1.1rem;
+        margin-top: 0.5rem;
+    }
+
+    .podium-content {
+        padding-top: 1rem;
+    }
+</style>
+
+<style>
+    @@media (max-width: 768px) {
+        .podium-card {
+            min-height: 300px;
+            padding: 1.5rem 1rem;
+        }
+
+        .podium-first {
+            min-height: 320px;
+            transform: scale(1);
+        }
+
+        .podium-first:hover {
+            transform: scale(1) translateY(-10px);
+        }
+
+        .podium-number {
+            font-size: 2.5rem;
+        }
+
+        .podium-title {
+            font-size: 1.1rem;
+        }
+
+        .podium-rating {
+            font-size: 1.2rem;
+        }
+    }
+</style>
+
+@code {
+    private List<RecetaRankingDto>? ranking;
+    private bool cargandoRanking = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarRanking();
+    }
+
+    private async Task CargarRanking()
+    {
+        try
+        {
+            cargandoRanking = true;
+            ranking = await recetaService.ObtenerRanking(3);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar ranking: {ex.Message}");
+        }
+        finally
+        {
+            cargandoRanking = false;
+        }
+    }
+
+    private void IrAReceta(int recetaId)
+    {
+        navigation.NavigateTo($"/recetas/{recetaId}");
+    }
+}

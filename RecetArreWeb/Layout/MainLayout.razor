@@ -1,4 +1,9 @@
-﻿@inherits LayoutComponentBase
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using RecetArreWeb.Auth
+@inject IAuthService authService
+@inject AuthenticationStateProvider authStateProvider
+@inject NavigationManager navigation
+@inherits LayoutComponentBase
 <div class="page">
     <div class="sidebar">
         <NavMenu />
@@ -7,6 +12,13 @@
     <main>
         <div class="top-row px-4">
             <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            <AuthorizeView>
+                <Authorized>
+                    <button class="btn btn-link text-decoration-none ms-3 p-0" @onclick="CerrarSesion">
+                        <span class="bi bi-box-arrow-right me-1" aria-hidden="true"></span>Logout
+                    </button>
+                </Authorized>
+            </AuthorizeView>
         </div>
 
         <article class="content px-4">
@@ -14,3 +26,17 @@
         </article>
     </main>
 </div>
+
+@code {
+    private async Task CerrarSesion()
+    {
+        await authService.Logout();
+
+        if (authStateProvider is AuthStateProvider provider)
+        {
+            provider.NotificarLogout();
+        }
+
+        navigation.NavigateTo("/login");
+    }
+}

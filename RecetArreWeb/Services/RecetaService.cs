@@ -10,16 +10,19 @@ namespace RecetArreWeb.Services
         Task<RecetaDto?> Crear(RecetaCreacionDto dto);
         Task<bool> Actualizar(int id, RecetaModificacionDto dto);
         Task<bool> Eliminar(int id);
+        Task<List<RecetaRankingDto>> ObtenerRanking(int cantidad = 3);
     }
 
     public class RecetaService : IRecetaService
     {
         private readonly HttpClient httpClient;
+        private readonly IRatingService? ratingService;
         private const string endpoint = "api/recetas";
 
-        public RecetaService(HttpClient httpClient)
+        public RecetaService(HttpClient httpClient, IRatingService? ratingService = null)
         {
             this.httpClient = httpClient;
+            this.ratingService = ratingService;
         }
 
         public async Task<List<RecetaDto>> ObtenerTodas()
@@ -94,6 +97,74 @@ namespace RecetArreWeb.Services
             {
                 Console.WriteLine($"Error al eliminar receta {id}: {ex.Message}");
                 return false;
+            }
+        }
+
+        public async Task<List<RecetaRankingDto>> ObtenerRanking(int cantidad = 3)
+        {
+            try
+            {
+                // Obtener todas las recetas
+                var recetas = await ObtenerTodas();
+
+                if (recetas == null || recetas.Count == 0)
+                    return new List<RecetaRankingDto>();
+
+                var ranking = new List<RecetaRankingDto>();
+
+                foreach (var receta in recetas)
+                {
+                    double promedioCalificacion = 0;
+                    int totalCalificaciones = 0;
+
+                    // Si tenemos acceso a RatingService, calcular el promedio real
+                    if (ratingService != null)
+                    {
+                        try
+                        {
+                            var todasCalificaciones = await ratingService.ObtenerTodosRatingsReceta(receta.Id);
+                            if (todasCalificaciones != null && todasCalificaciones.Count > 0)
+                            {
+                                totalCalificaciones = todasCalificaciones.Count;
+                                promedioCalificacion = todasCalificaciones.Average(r => r.Calificacion);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Error al obtener calificaciones para receta {receta.Id}: {ex.Message}");
+                        }
+                    }
+
+                    ranking.Add(new RecetaRankingDto
+                    {
+                        Id = receta.Id,
+                        Nombre = receta.Nombre,
+                        PromedioCalificacion = promedioCalificacion,
+                        TotalCalificaciones = totalCalificaciones
+                    });
+                }
+
+                // Ordenar por promedio descendente y tomar los top N
+                var topRecetas = ranking
+                    .OrderByDescending(r => r.PromedioCalificacion)
+                    .ThenByDescending(r => r.TotalCalificaciones)
+                    .Take(cantidad)
+                    .Select((r, index) => new RecetaRankingDto
+                    {
+                        Id = r.Id,
+                        Nombre = r.Nombre,
+                        PromedioCalificacion = r.PromedioCalificacion,
+                        TotalCalificaciones = r.TotalCalificaciones,
+                        Posicion = index + 1
+                    })
+                    .ToList();
+
+                return topRecetas;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al obtener ranking: {ex.Message}");
+                return new List<RecetaRankingDto>();
             }
         }
     }

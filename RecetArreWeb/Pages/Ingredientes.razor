@@ -1,7 +1,8 @@
 @page "/ingredientes"
-@using Microsoft.AspNetCore.Authorization
-@attribute [Authorize]
+@using Microsoft.AspNetCore.Components.Authorization
+@* @attribute [Authorize] *@
 @inject IIngredienteService ingredienteService
+@inject AuthenticationStateProvider authStateProvider
 @inject IJSRuntime JSRuntime
 
 <PageTitle>Gestión de Ingredientes</PageTitle>
@@ -14,7 +15,7 @@
                     <h1 class="h3 text-brand mb-1">Gestión de Ingredientes</h1>
                     <p class="text-muted mb-0">Administra los ingredientes disponibles</p>
                 </div>
-                <button class="btn btn-brand" @onclick="AbrirModalCrear">
+                <button class="btn btn-brand" @onclick="AbrirModalCrear" disabled="@(!esAutenticado)">
                     <span class="bi bi-plus-circle"></span> Nuevo Ingrediente
                 </button>
             </div>
@@ -88,7 +89,7 @@
                                 <h5 class="card-title text-brand mb-0">@ingrediente.Nombre</h5>
                                 <div class="dropdown">
                                     <button class="btn btn-sm btn-link text-muted" type="button"
-                                            data-bs-toggle="dropdown" aria-expanded="false">
+                                            data-bs-toggle="dropdown" aria-expanded="false" disabled="@(!esAutenticado)">
                                         <span class="bi bi-three-dots-vertical"></span>
                                     </button>
                                     <ul class="dropdown-menu">
@@ -160,11 +161,11 @@
                                             <td>@ingrediente.CreadoUtc.ToString("dd/MM/yyyy HH:mm")</td>
                                             <td class="text-end">
                                                 <button class="btn btn-sm btn-outline-primary me-1"
-                                                        @onclick="() => AbrirModalEditar(ingrediente)">
+                                                        @onclick="() => AbrirModalEditar(ingrediente)" disabled="@(!esAutenticado)">
                                                     <span class="bi bi-pencil"></span>
                                                 </button>
                                                 <button class="btn btn-sm btn-outline-danger"
-                                                        @onclick="() => EliminarIngrediente(ingrediente.Id)">
+                                                        @onclick="() => EliminarIngrediente(ingrediente.Id)" disabled="@(!esAutenticado)">
                                                     <span class="bi bi-trash"></span>
                                                 </button>
                                             </td>
@@ -236,6 +237,7 @@
     private string descripcionIngrediente = "";
     private string mensajeError = string.Empty;
     private string mensajeExito = string.Empty;
+    private bool esAutenticado = false;
 
     private IEnumerable<IngredientesDto> IngredientesFiltrados
     {
@@ -256,6 +258,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await authStateProvider.GetAuthenticationStateAsync();
+        esAutenticado = authState.User.Identity?.IsAuthenticated ?? false;
         await CargarIngredientes();
     }
 
@@ -274,6 +278,12 @@
 
     private void AbrirModalCrear()
     {
+        if (!esAutenticado)
+        {
+            mensajeError = "Debes iniciar sesión para crear ingredientes.";
+            return;
+        }
+
         ingredienteEditando = null;
         nombreIngrediente = "";
         unidadMedidaIngrediente = "";
@@ -284,6 +294,12 @@
 
     private void AbrirModalEditar(IngredientesDto ingrediente)
     {
+        if (!esAutenticado)
+        {
+            mensajeError = "Debes iniciar sesión para editar ingredientes.";
+            return;
+        }
+
         ingredienteEditando = ingrediente;
         nombreIngrediente = ingrediente.Nombre;
         unidadMedidaIngrediente = ingrediente.UnidadMedida;
@@ -304,6 +320,12 @@
 
     private async Task GuardarIngrediente()
     {
+        if (!esAutenticado)
+        {
+            mensajeError = "Debes iniciar sesión para guardar ingredientes.";
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(nombreIngrediente))
         {
             mensajeError = "El nombre es requerido";
@@ -378,6 +400,12 @@
 
     private async Task EliminarIngrediente(int id)
     {
+        if (!esAutenticado)
+        {
+            mensajeError = "Debes iniciar sesión para eliminar ingredientes.";
+            return;
+        }
+
         if (!await JSRuntime.InvokeAsync<bool>("confirm", "¿Estás seguro de eliminar este ingrediente?"))
             return;
 

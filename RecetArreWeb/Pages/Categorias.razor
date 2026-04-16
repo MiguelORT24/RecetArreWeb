@@ -1,6 +1,8 @@
 @page "/categorias" 
 @using RecetArreWeb.DTOs
+@using Microsoft.AspNetCore.Components.Authorization
 @inject RecetArreWeb.Services.ICategoriaService CategoriaService
+@inject AuthenticationStateProvider authStateProvider
 
 <PageTitle>Gestión de Categorías</PageTitle>
 
@@ -27,7 +29,7 @@
                     <h1 class="h3 text-brand mb-1">Gestión de Categorías</h1>
                     <p class="text-muted mb-0">Administra las categorías de recetas</p>
                 </div>
-                <button class="btn btn-brand" @onclick="AbrirModalCrear">
+                <button class="btn btn-brand" @onclick="AbrirModalCrear" disabled="@(!esAutenticado)">
                     <span class="bi bi-plus-circle"></span> Nueva Categoría
                 </button>
             </div>
@@ -88,7 +90,7 @@
                                 <h5 class="card-title text-brand mb-0">@categoria.Nombre</h5>
                                 <div class="dropdown">
                                     <button class="btn btn-sm btn-link text-muted" type="button" 
-                                            data-bs-toggle="dropdown" aria-expanded="false">
+                                            data-bs-toggle="dropdown" aria-expanded="false" disabled="@(!esAutenticado)">
                                         <span class="bi bi-three-dots-vertical"></span>
                                     </button>
                                     <ul class="dropdown-menu">
@@ -160,11 +162,11 @@
                                             <td>@categoria.CreadoUtc.ToString("dd/MM/yyyy HH:mm")</td>
                                             <td class="text-end">
                                                 <button class="btn btn-sm btn-outline-primary me-1" 
-                                                        @onclick="() => AbrirModalEditar(categoria)">
+                                                        @onclick="() => AbrirModalEditar(categoria)" disabled="@(!esAutenticado)">
                                                     <span class="bi bi-pencil"></span>
                                                 </button>
                                                 <button class="btn btn-sm btn-outline-danger" 
-                                                        @onclick="() => EliminarCategoria(categoria.Id)">
+                                                        @onclick="() => EliminarCategoria(categoria.Id)" disabled="@(!esAutenticado)">
                                                     <span class="bi bi-trash"></span>
                                                 </button>
                                             </td>
@@ -241,6 +243,7 @@
     private bool mostrarAlertaExito = false;
     private string mensajeError = string.Empty;
     private string mensajeExito = string.Empty;
+    private bool esAutenticado = false;
 
     private IEnumerable<CategoriaDto> CategoriasFiltradas
     {
@@ -263,6 +266,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await authStateProvider.GetAuthenticationStateAsync();
+        esAutenticado = authState.User.Identity?.IsAuthenticated ?? false;
         await CargarCategorias();
     }
 
@@ -283,6 +288,13 @@
 
     private void AbrirModalCrear()
     {
+        if (!esAutenticado)
+        {
+            mensajeError = "Debes iniciar sesión para crear categorías.";
+            mostrarAlertaError = true;
+            return;
+        }
+
         categoriaEditando = null;
         nombreCategoria = "";
         descripcionCategoria = "";
@@ -291,6 +303,13 @@
 
     private void AbrirModalEditar(CategoriaDto categoria)
     {
+        if (!esAutenticado)
+        {
+            mensajeError = "Debes iniciar sesión para editar categorías.";
+            mostrarAlertaError = true;
+            return;
+        }
+
         categoriaEditando = categoria;
         nombreCategoria = categoria.Nombre;
         descripcionCategoria = categoria.Descripcion ?? "";
@@ -307,6 +326,13 @@
 
     private async Task GuardarCategoria()
     {
+        if (!esAutenticado)
+        {
+            mensajeError = "Debes iniciar sesión para guardar categorías.";
+            mostrarAlertaError = true;
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(nombreCategoria)) return;
 
         if (categoriaEditando == null)
@@ -370,6 +396,13 @@
 
     private async Task EliminarCategoriaAsync(int id)
     {
+        if (!esAutenticado)
+        {
+            mensajeError = "Debes iniciar sesión para eliminar categorías.";
+            mostrarAlertaError = true;
+            return;
+        }
+
         var ok = await CategoriaService.EliminarCategoria(id);
         if (ok)
         {

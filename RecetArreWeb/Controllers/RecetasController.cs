@@ -36,6 +36,7 @@ namespace RecetArreAPI2.Controllers
             var recetas = await context.Recetas
                 .Include(r => r.Ing_Recs).ThenInclude(ir => ir.Ingrediente)
                 .Include(r => r.Rec_Tiems).ThenInclude(rt => rt.Tiempo)
+                .Include(r => r.Ratings)
                 .OrderByDescending(r => r.CreadoUtc)
                 .ToListAsync();
 
@@ -45,7 +46,9 @@ namespace RecetArreAPI2.Controllers
                 Nombre = r.Nombre,
                 Instrucciones = r.Instrucciones,
                 CreadoUtc = r.CreadoUtc,
-                Ingredientes = r.Ing_Recs?.Select(ir => mapper.Map<RecetArreAPI2.DTOs.Ingredientes.IngredientesDto>(ir.Ingrediente)).ToList()
+                Ingredientes = r.Ing_Recs?.Select(ir => mapper.Map<RecetArreAPI2.DTOs.Ingredientes.IngredientesDto>(ir.Ingrediente)).ToList(),
+                PromedioCalificaciones = r.Ratings != null && r.Ratings.Any() ? r.Ratings.Average(rat => rat.Calificacion) : null,
+                TotalCalificaciones = r.Ratings?.Count ?? 0
             }).ToList();
 
             return Ok(result);
@@ -63,6 +66,7 @@ namespace RecetArreAPI2.Controllers
                 .Include(r => r.Cat_Recs).ThenInclude(cr => cr.Categoria)
                 .Include(r => r.Ing_Recs).ThenInclude(ir => ir.Ingrediente)
                 .Include(r => r.Rec_Tiems).ThenInclude(rt => rt.Tiempo)
+                .Include(r => r.Ratings)
                 .Where(r => r.Cat_Recs.Any(cr => categoriaId.Contains(cr.CategoriaId)))
                 .OrderByDescending(r => r.CreadoUtc)
                 .ToListAsync();
@@ -72,7 +76,9 @@ namespace RecetArreAPI2.Controllers
                 Nombre = r.Nombre,
                 Instrucciones = r.Instrucciones,
                 CreadoUtc = r.CreadoUtc,
-                Ingredientes = r.Ing_Recs?.Select(ir => mapper.Map<RecetArreAPI2.DTOs.Ingredientes.IngredientesDto>(ir.Ingrediente)).ToList()
+                Ingredientes = r.Ing_Recs?.Select(ir => mapper.Map<RecetArreAPI2.DTOs.Ingredientes.IngredientesDto>(ir.Ingrediente)).ToList(),
+                PromedioCalificaciones = r.Ratings != null && r.Ratings.Any() ? r.Ratings.Average(rat => rat.Calificacion) : null,
+                TotalCalificaciones = r.Ratings?.Count ?? 0
             }).ToList();
             return Ok(result);
         }
@@ -84,6 +90,7 @@ namespace RecetArreAPI2.Controllers
             var receta = await context.Recetas
                 .Include(r => r.Ing_Recs).ThenInclude(ir => ir.Ingrediente)
                 .Include(r => r.Rec_Tiems).ThenInclude(rt => rt.Tiempo)
+                .Include(r => r.Ratings)
                 .FirstOrDefaultAsync(r => r.Id == id);
 
             if (receta == null)
@@ -97,7 +104,9 @@ namespace RecetArreAPI2.Controllers
                 Nombre = receta.Nombre,
                 Instrucciones = receta.Instrucciones,
                 CreadoUtc = receta.CreadoUtc,
-                Ingredientes = receta.Ing_Recs?.Select(ir => mapper.Map<RecetArreAPI2.DTOs.Ingredientes.IngredientesDto>(ir.Ingrediente)).ToList()
+                Ingredientes = receta.Ing_Recs?.Select(ir => mapper.Map<RecetArreAPI2.DTOs.Ingredientes.IngredientesDto>(ir.Ingrediente)).ToList(),
+                PromedioCalificaciones = receta.Ratings != null && receta.Ratings.Any() ? receta.Ratings.Average(rat => rat.Calificacion) : null,
+                TotalCalificaciones = receta.Ratings?.Count ?? 0
             };
 
             return Ok(dto);

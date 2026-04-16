@@ -1,9 +1,92 @@
 @page "/recetas/{Id:int}"
 @inject IRecetaService recetaService
 @inject IComentarioService comentarioService
+@inject IRatingService ratingService
+@inject AuthenticationStateProvider authStateProvider
 @inject NavigationManager navigation
 
 <PageTitle>Detalle Receta</PageTitle>
+
+<style>
+    .stars-container {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .estrella {
+        display: inline-block;
+    }
+
+    .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1050;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-dialog {
+        position: relative;
+        width: 100%;
+        margin: 1.75rem auto;
+    }
+
+    .modal-dialog-centered {
+        display: flex;
+        align-items: center;
+        min-height: calc(100% - 3.5rem);
+    }
+
+    .modal-content {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        pointer-events: auto;
+        background-color: #fff;
+        background-clip: padding-box;
+        border: 1px solid rgba(0, 0, 0, 0.2);
+        border-radius: 0.3rem;
+        outline: 0;
+    }
+
+    .modal-header {
+        display: flex;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .modal-body {
+        position: relative;
+        flex: 1 1 auto;
+        padding: 1rem;
+    }
+
+    .modal-footer {
+        display: flex;
+        flex-shrink: 0;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-end;
+        padding: 0.75rem;
+        border-top: 1px solid #dee2e6;
+        gap: 0.5rem;
+    }
+
+    .modal-title {
+        margin-bottom: 0;
+        line-height: 1.5;
+        font-size: 1.25rem;
+        font-weight: 500;
+    }
+</style>
 
 <div class="container py-4">
     <button class="btn btn-outline-secondary btn-sm mb-3" @onclick="@(() => navigation.NavigateTo("/recetas"))">
@@ -23,10 +106,27 @@
             <div class="card-body">
                 <h3 class="text-brand">@receta.Nombre</h3>
 
-                <p class="text-muted small mb-3">
-                    <span class="bi bi-calendar me-1"></span>
-                    Creada el @receta.CreadoUtc.ToString("dd/MM/yyyy")
-                </p>
+                <div class="mb-3">
+                    <p class="text-muted small mb-1">
+                        <span class="bi bi-calendar me-1"></span>
+                        Creada el @receta.CreadoUtc.ToString("dd/MM/yyyy")
+                    </p>
+
+                    @if (PromedioCalificaciones.HasValue && TotalCalificaciones > 0)
+                    {
+                        <p class="text-warning small mb-0">
+                            <span class="bi bi-star-fill me-1"></span>
+                            <strong>@PromedioCalificaciones.Value.ToString("F2")</strong> / 5
+                            <span class="ms-1">(@TotalCalificaciones voto@(TotalCalificaciones != 1 ? "s" : ""))</span>
+                        </p>
+                    }
+                    else
+                    {
+                        <p class="text-muted small mb-0">
+                            <span class="bi bi-star me-1"></span>Sin calificaciones aún
+                        </p>
+                    }
+                </div>
 
                 @if (receta.Ingredientes != null && receta.Ingredientes.Any())
                 {
@@ -51,6 +151,122 @@
                         <h5>Instrucciones</h5>
                         <p style="white-space: pre-wrap;">@receta.Instrucciones</p>
                     </div>
+                }
+            </div>
+        </div>
+
+        <!-- Sección de Calificaciones -->
+        <div class="card mb-4 border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <span class="bi bi-star-fill text-warning me-2"></span>Calificación
+                </h5>
+            </div>
+            <div class="card-body">
+                @if (cargandoRating)
+                {
+                    <div class="text-center">
+                        <div class="spinner-border spinner-border-sm text-brand" role="status"></div>
+                    </div>
+                }
+                else
+                {
+                    @if (!esAutenticado)
+                    {
+                        <!-- Si no está autenticado -->
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <div class="stars-container">
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        <span class="estrella" style="cursor: default; font-size: 2rem; color: #CCC;">
+                                            ★
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                            <div class="alert alert-info py-2 mb-0">
+                                <span class="bi bi-info-circle me-2"></span>
+                                <a href="/login" class="alert-link">Inicia sesión</a> para calificar esta receta.
+                            </div>
+                            <button class="btn btn-sm btn-brand mt-2" disabled>
+                                Guardar calificación
+                            </button>
+                        </div>
+                    }
+                    else if (CalificacionActual.HasValue)
+                    {
+                        <!-- Si ya ha calificado -->
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <div class="stars-container">
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        <span class="estrella" style="cursor: default; font-size: 2rem; color: @(i <= CalificacionActual ? "#FFC107" : "#CCC");">
+                                            ★
+                                        </span>
+                                    }
+                                </div>
+                                <span class="badge bg-success">Tu calificación: @CalificacionActual ⭐</span>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary" @onclick="@(() => mostrarModalCambiar = true)">
+                                <span class="bi bi-pencil me-1"></span> Cambiar tu calificación
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <!-- Si puede calificar pero no lo ha hecho -->
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <div class="stars-container" @onmouseleave="@(() => HoveredRating = null)">
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        int estrella = i;
+                                        <span class="estrella" 
+                                              @onmouseover="@(() => HoveredRating = estrella)"
+                                              @onclick="@(() => CalificacionSeleccionada = estrella)"
+                                              style="cursor: pointer; font-size: 2rem; color: @(estrella <= (HoveredRating ?? CalificacionSeleccionada ?? 0) ? "#FFC107" : "#CCC"); transition: all 0.1s ease;">
+                                            ★
+                                        </span>
+                                    }
+                                </div>
+                                <div>
+                                    @if (HoveredRating.HasValue)
+                                    {
+                                        <span class="badge bg-warning text-dark">@HoveredRating estrella@(HoveredRating != 1 ? "s" : "")</span>
+                                    }
+                                    else if (CalificacionSeleccionada.HasValue)
+                                    {
+                                        <span class="badge bg-success">@CalificacionSeleccionada estrella@(CalificacionSeleccionada != 1 ? "s" : "")</span>
+                                    }
+                                </div>
+                            </div>
+                            <button class="btn btn-sm btn-brand" @onclick="@(() => GuardarCalificacion())" disabled="@(!CalificacionSeleccionada.HasValue || enviandoRating)">
+                                @if (enviandoRating)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                Guardar calificación
+                            </button>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(mensajeErrorRating))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show py-2 mt-2" role="alert">
+                            @mensajeErrorRating
+                            <button type="button" class="btn-close" @onclick="() => mensajeErrorRating = string.Empty"></button>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(mensajeExitoRating))
+                    {
+                        <div class="alert alert-success alert-dismissible fade show py-2 mt-2" role="alert">
+                            @mensajeExitoRating
+                            <button type="button" class="btn-close" @onclick="() => mensajeExitoRating = string.Empty"></button>
+                        </div>
+                    }
                 }
             </div>
         </div>
@@ -85,16 +301,32 @@
 
                 <!-- Formulario nuevo comentario -->
                 <div class="mb-4">
-                    <label class="form-label fw-semibold">Añadir comentario</label>
-                    <textarea class="form-control mb-2" rows="3" @bind="nuevoContenido"
-                              placeholder="Escribe tu comentario sobre esta receta..."></textarea>
-                    <button class="btn btn-brand btn-sm" @onclick="AgregarComentario" disabled="@enviandoComentario">
-                        @if (enviandoComentario)
-                        {
-                            <span class="spinner-border spinner-border-sm me-1"></span>
-                        }
-                        Publicar comentario
-                    </button>
+                    @if (!esAutenticado)
+                    {
+                        <label class="form-label fw-semibold">Añadir comentario</label>
+                        <textarea class="form-control mb-2" rows="3"
+                                  placeholder="Escribe tu comentario sobre esta receta..." disabled></textarea>
+                        <button class="btn btn-brand btn-sm" disabled>
+                            Publicar comentario
+                        </button>
+                        <div class="alert alert-info py-2 mb-0 mt-2">
+                            <span class="bi bi-info-circle me-2"></span>
+                            <a href="/login" class="alert-link">Inicia sesión</a> para comentar esta receta.
+                        </div>
+                    }
+                    else
+                    {
+                        <label class="form-label fw-semibold">Añadir comentario</label>
+                        <textarea class="form-control mb-2" rows="3" @bind="nuevoContenido"
+                                  placeholder="Escribe tu comentario sobre esta receta..."></textarea>
+                        <button class="btn btn-brand btn-sm" @onclick="AgregarComentario" disabled="@enviandoComentario">
+                            @if (enviandoComentario)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            Publicar comentario
+                        </button>
+                    }
                 </div>
 
                 <hr />
@@ -129,6 +361,57 @@
     }
 </div>
 
+<!-- Modal para cambiar calificación -->
+@if (mostrarModalCambiar)
+{
+    <div class="modal d-block" style="background-color: rgba(0, 0, 0, 0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Cambiar tu calificación</h5>
+                    <button type="button" class="btn-close" @onclick="@(() => mostrarModalCambiar = false)"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-4">
+                        <div class="stars-container" @onmouseleave="@(() => HoveredRatingModal = null)">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                int estrella = i;
+                                <span class="estrella" 
+                                      @onmouseover="@(() => HoveredRatingModal = estrella)"
+                                      @onclick="@(() => CalificacionSeleccionadaModal = estrella)"
+                                      style="cursor: pointer; font-size: 2.5rem; color: @(estrella <= (HoveredRatingModal ?? CalificacionSeleccionadaModal ?? 0) ? "#FFC107" : "#CCC"); transition: all 0.1s ease;">
+                                    ★
+                                </span>
+                            }
+                        </div>
+                    </div>
+                    @if (HoveredRatingModal.HasValue)
+                    {
+                        <p class="text-center text-muted">@HoveredRatingModal estrella@(HoveredRatingModal != 1 ? "s" : "")</p>
+                    }
+                    else if (CalificacionSeleccionadaModal.HasValue)
+                    {
+                        <p class="text-center text-success"><strong>@CalificacionSeleccionadaModal estrella@(CalificacionSeleccionadaModal != 1 ? "s" : "")</strong></p>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="@(() => { mostrarModalCambiar = false; HoveredRatingModal = null; CalificacionSeleccionadaModal = null; })">
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-brand" @onclick="@(() => GuardarCambioCalificacion())" disabled="@(!CalificacionSeleccionadaModal.HasValue || enviandoRating)">
+                        @if (enviandoRating)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        Guardar cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     [Parameter] public int Id { get; set; }
 
@@ -140,6 +423,21 @@
     private string mensajeErrorComentario = string.Empty;
     private string mensajeExitoComentario = string.Empty;
 
+    // Ratings
+    private bool cargandoRating = true;
+    private bool enviandoRating = false;
+    private int? CalificacionActual = null;
+    private int? HoveredRating = null;
+    private int? HoveredRatingModal = null;
+    private int? CalificacionSeleccionada = null;
+    private int? CalificacionSeleccionadaModal = null;
+    private double? PromedioCalificaciones = null;
+    private int TotalCalificaciones = 0;
+    private string mensajeErrorRating = string.Empty;
+    private string mensajeExitoRating = string.Empty;
+    private bool esAutenticado = false;
+    private bool mostrarModalCambiar = false;
+
     protected override async Task OnInitializedAsync()
     {
         receta = await recetaService.ObtenerPorId(Id);
@@ -148,7 +446,158 @@
             navigation.NavigateTo("/recetas");
             return;
         }
+
+        // Verificar si el usuario está autenticado
+        var authState = await authStateProvider.GetAuthenticationStateAsync();
+        esAutenticado = authState.User.Identity?.IsAuthenticated ?? false;
+
         await CargarComentarios();
+        await CargarCalificaciones();
+    }
+
+    private async Task CargarCalificaciones()
+    {
+        try
+        {
+            cargandoRating = true;
+
+            // Obtener la calificación actual del usuario
+            if (esAutenticado)
+            {
+                var miCalificacion = await ratingService.ObtenerRatingReceta(Id);
+                CalificacionActual = miCalificacion?.Calificacion;
+            }
+
+            // Obtener todas las calificaciones para calcular el promedio
+            var todasCalificaciones = await ratingService.ObtenerTodosRatingsReceta(Id);
+            if (todasCalificaciones != null && todasCalificaciones.Count > 0)
+            {
+                TotalCalificaciones = todasCalificaciones.Count;
+                PromedioCalificaciones = todasCalificaciones.Average(r => r.Calificacion);
+            }
+            else
+            {
+                TotalCalificaciones = 0;
+                PromedioCalificaciones = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar calificaciones: {ex.Message}");
+            mensajeErrorRating = "No se pudieron cargar las calificaciones.";
+        }
+        finally
+        {
+            cargandoRating = false;
+        }
+    }
+
+    private async Task GuardarCalificacion()
+    {
+        if (!esAutenticado)
+        {
+            mensajeErrorRating = "Debes iniciar sesión para calificar.";
+            return;
+        }
+
+        if (!CalificacionSeleccionada.HasValue)
+        {
+            mensajeErrorRating = "Por favor selecciona una calificación.";
+            return;
+        }
+
+        enviandoRating = true;
+        mensajeErrorRating = string.Empty;
+        mensajeExitoRating = string.Empty;
+
+        try
+        {
+            var dto = new RatingCreacionDto
+            {
+                Calificacion = CalificacionSeleccionada.Value,
+                RecetaId = Id
+            };
+
+            var resultado = await ratingService.CrearOActualizarRating(dto);
+
+            if (resultado != null)
+            {
+                CalificacionActual = CalificacionSeleccionada.Value;
+                CalificacionSeleccionada = null;
+                HoveredRating = null;
+                mensajeExitoRating = $"¡Calificación de {CalificacionActual} estrella{(CalificacionActual != 1 ? "s" : "")} registrada!";
+
+                // Recargar promedios
+                await CargarCalificaciones();
+            }
+            else
+            {
+                mensajeErrorRating = "No se pudo guardar la calificación.";
+            }
+        }
+        catch (Exception ex)
+        {
+            mensajeErrorRating = $"Error: {ex.Message}";
+            Console.WriteLine($"Error al calificar: {ex.Message}");
+        }
+        finally
+        {
+            enviandoRating = false;
+        }
+    }
+
+    private async Task GuardarCambioCalificacion()
+    {
+        if (!esAutenticado)
+        {
+            mensajeErrorRating = "Debes iniciar sesión para calificar.";
+            return;
+        }
+
+        if (!CalificacionSeleccionadaModal.HasValue)
+        {
+            return;
+        }
+
+        enviandoRating = true;
+        mensajeErrorRating = string.Empty;
+        mensajeExitoRating = string.Empty;
+
+        try
+        {
+            var dto = new RatingCreacionDto
+            {
+                Calificacion = CalificacionSeleccionadaModal.Value,
+                RecetaId = Id
+            };
+
+            var resultado = await ratingService.CrearOActualizarRating(dto);
+
+            if (resultado != null)
+            {
+                CalificacionActual = CalificacionSeleccionadaModal.Value;
+                HoveredRatingModal = null;
+                CalificacionSeleccionadaModal = null;
+                mostrarModalCambiar = false;
+                mensajeExitoRating = $"¡Calificación actualizada a {CalificacionActual} estrella{(CalificacionActual != 1 ? "s" : "")}!";
+
+                // Recargar promedios
+                await CargarCalificaciones();
+            }
+            else
+            {
+                mensajeErrorRating = "No se pudo actualizar la calificación.";
+            }
+        }
+        catch (Exception ex)
+        {
+            mensajeErrorRating = $"Error: {ex.Message}";
+            Console.WriteLine($"Error al actualizar calificación: {ex.Message}");
+        }
+        finally
+        {
+            enviandoRating = false;
+        }
     }
 
     private async Task CargarComentarios()
@@ -158,6 +607,12 @@
 
     private async Task AgregarComentario()
     {
+        if (!esAutenticado)
+        {
+            mensajeErrorComentario = "Debes iniciar sesión para comentar.";
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(nuevoContenido))
         {
             mensajeErrorComentario = "El comentario no puede estar vacío.";
