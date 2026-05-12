@@ -73,7 +73,7 @@ namespace RecetArreWeb.Services
                 var token = await jsRuntime.InvokeAsync<string>("localStorage.getItem", TOKEN_KEY);
                 //2. Si no hay toquek, devolver null
                 if (string.IsNullOrEmpty(token))
-                    return null;
+                    return string.Empty;
 
                 //Verificar si el token expiró
                 var expiracion = await ObtenerExpiracion();
@@ -81,7 +81,7 @@ namespace RecetArreWeb.Services
                 {
                     //Token expirado, eliminarlo y devolver null
                     await EliminarToken();
-                    return null;
+                    return string.Empty;
                 }
                 return token;
 
@@ -89,9 +89,8 @@ namespace RecetArreWeb.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"Error al obtener el token: {ex.Message}");
-                //return null;
+                return string.Empty;
             }
-           return await jsRuntime.InvokeAsync<string>("local.Storage.getItem", TOKEN_KEY);
         }
     }
 }

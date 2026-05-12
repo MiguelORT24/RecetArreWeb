@@ -5,6 +5,7 @@
 @inject IRecetaService recetaService
 @inject IIngredienteService ingredienteService
 @inject NavigationManager navigation
+@inject IJSRuntime jsRuntime
 
 <PageTitle>@(Id == null ? "Nueva Receta" : "Editar Receta")</PageTitle>
 
@@ -24,6 +25,14 @@
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
             @mensajeError
             <button type="button" class="btn-close" @onclick="() => mensajeError = string.Empty"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(mensajeExito))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @mensajeExito
+            <button type="button" class="btn-close" @onclick="() => mensajeExito = string.Empty"></button>
         </div>
     }
 
@@ -120,6 +129,7 @@
     private bool cargando = true;
     private bool guardando = false;
     private string mensajeError = string.Empty;
+    private string mensajeExito = string.Empty;
 
     private void VolverARecetas() => navigation.NavigateTo("/recetas");
 
@@ -166,6 +176,7 @@
 
         guardando = true;
         mensajeError = string.Empty;
+        mensajeExito = string.Empty;
 
         try
         {
@@ -183,16 +194,25 @@
                 if (resultado)
                     navigation.NavigateTo($"/recetas/{Id.Value}");
                 else
-                    mensajeError = "No se pudo actualizar la receta";
+                    mensajeError = recetaService.UltimoError;
             }
             else
             {
                 var resultado = await recetaService.Crear(modelo);
 
                 if (resultado != null)
-                    navigation.NavigateTo($"/recetas/{resultado.Id}");
+                {
+                    if (resultado.MedallasOtorgadas.Any())
+                    {
+                        var medallas = string.Join(", ", resultado.MedallasOtorgadas.Select(m => m.Nombre));
+                        await jsRuntime.InvokeVoidAsync("alert", $"¡Receta creada! Medallas otorgadas: {medallas}");
+                    }
+
+                    mensajeExito = "Receta creada exitosamente.";
+                    navigation.NavigateTo($"/recetas/{resultado.Receta.Id}");
+                }
                 else
-                    mensajeError = "No se pudo crear la receta. Verifica los datos.";
+                    mensajeError = recetaService.UltimoError;
             }
         }
         catch (Exception ex)

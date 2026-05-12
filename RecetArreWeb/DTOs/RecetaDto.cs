@@ -1,6 +1,7 @@
 namespace RecetArreWeb.DTOs
 {
     using RecetArreWeb.DTOs;
+    using RecetArreWeb.DTOs.RecetArreAPI2.DTOs.Medallas;
     using System;
     using System.Collections.Generic;
 
@@ -41,4 +42,14 @@ namespace RecetArreWeb.DTOs
         public List<int>? IngredienteIds { get; set; }
         public List<int>? TiempoIds { get; set; }
     }
+
+    /// <summary>
+    /// // medallas
+    /// </summary>
+    public class RecetaCreacionRespuestaDto
+    {
+        public RecetaDto Receta { get; set; } = default!;
+        public List<MedallaDto> MedallasOtorgadas { get; set; } = new();
+    }
+
 }

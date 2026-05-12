@@ -23,7 +23,7 @@ builder.Services.AddScoped<HttpClient>(sp =>
 
     return new HttpClient(handler)
     {
-        BaseAddress = new Uri("https://localhost:7019/")
+        BaseAddress = new Uri("https://pruebafulls.somee.com/")
     };
 });
 
@@ -33,6 +33,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICategoriaService, CategoriaService>();
 // Registrar servicio de recetas
 builder.Services.AddScoped<IRecetaService, RecetaService>();
+builder.Services.AddScoped<IMedallaService, MedallaService>();
 // Registrar servicio de comentarios e ingredientes
 builder.Services.AddScoped<IComentarioService, ComentarioService>();
 // Ingrediente service

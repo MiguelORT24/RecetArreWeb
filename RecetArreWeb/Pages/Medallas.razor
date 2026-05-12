@@ -1,0 +1,140 @@
+@page "/medallas"
+@using Microsoft.AspNetCore.Authorization
+@using RecetArreWeb.DTOs.RecetArreAPI2.DTOs.Medallas
+@attribute [Authorize]
+@inject IMedallaService medallaService
+
+<PageTitle>Mis Medallas</PageTitle>
+
+<div class="container py-4">
+    <h1 class="h3 text-brand mb-3">Mis Medallas</h1>
+
+    @if (!string.IsNullOrEmpty(mensajeError))
+    {
+        <div class="alert alert-danger" role="alert">@mensajeError</div>
+    }
+
+    @if (cargando)
+    {
+        <div class="text-center py-4">
+            <div class="spinner-border text-brand" role="status"></div>
+            <p class="text-muted mt-2">Cargando medallas...</p>
+        </div>
+    }
+    else
+    {
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-lg-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Recetas creadas</h5>
+                        <p class="display-6 mb-0">@progreso?.TotalRecetasCreadas</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Medallas obtenidas</h5>
+                        <p class="display-6 mb-0">@misMedallas.Count</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Disponibles por desbloquear</h5>
+                        <p class="display-6 mb-0">@progreso?.MedallasDisponibles.Count</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Mis medallas (@misMedallas.Count)</h5>
+            </div>
+            <div class="card-body">
+                @if (!misMedallas.Any())
+                {
+                    <p class="text-muted mb-0">Aún no tienes medallas. Crea recetas para desbloquearlas.</p>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var medallaUsuario in misMedallas)
+                        {
+                            <li class="list-group-item px-0">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <strong>@medallaUsuario.Medalla.Nombre</strong>
+                                        <div class="text-muted small">@medallaUsuario.Medalla.Descripcion</div>
+                                        <div class="small">Puntos requeridos: @medallaUsuario.Medalla.Puntos</div>
+                                    </div>
+                                    <span class="badge bg-success">@medallaUsuario.FechaObtencion.ToLocalTime().ToString("dd/MM/yyyy")</span>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Siguientes medallas</h5>
+            </div>
+            <div class="card-body">
+                @if (progreso == null || !progreso.MedallasDisponibles.Any())
+                {
+                    <p class="text-muted mb-0">No hay medallas disponibles por ahora.</p>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var medalla in progreso.MedallasDisponibles)
+                        {
+                            <li class="list-group-item px-0">
+                                <strong>@medalla.Nombre</strong>
+                                <div class="text-muted small">@medalla.Descripcion</div>
+                                <div class="small">Puntos requeridos: @medalla.Puntos</div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private bool cargando = true;
+    private string mensajeError = string.Empty;
+    private List<UsuarioMedallaDto> misMedallas = new();
+    private ProgresoMedallasDto? progreso;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+
+    private async Task CargarDatos()
+    {
+        cargando = true;
+        mensajeError = string.Empty;
+
+        misMedallas = await medallaService.ObtenerMisMedallas();
+        if (!string.IsNullOrEmpty(medallaService.UltimoError))
+        {
+            mensajeError = medallaService.UltimoError;
+        }
+
+        progreso = await medallaService.ObtenerProgreso();
+        if (!string.IsNullOrEmpty(medallaService.UltimoError))
+        {
+            mensajeError = medallaService.UltimoError;
+        }
+
+        cargando = false;
+    }
+}
