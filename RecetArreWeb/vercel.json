@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "/pages/Home.razor"
+      "destination": "/wwwroot/index.html"
     }
   ]
 }
