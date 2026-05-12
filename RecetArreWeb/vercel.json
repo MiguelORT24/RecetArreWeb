@@ -1,5 +1,8 @@
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": "/wwwroot/index.html" }
+    {
+      "source": "/(.*)",
+      "destination": "/pages/Home.razor"
+    }
   ]
 }
